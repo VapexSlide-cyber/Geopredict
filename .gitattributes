@@ -1,1 +1,4 @@
 *.pkl filter=lfs diff=lfs merge=lfs -text
+api/RF_Stage1_model.pkl filter=lfs diff=lfs merge=lfs -text
+api/RF_Stage2_qu_qadm.pkl filter=lfs diff=lfs merge=lfs -text
+api/RF_Stage2_FS.pkl filter=lfs diff=lfs merge=lfs -text
