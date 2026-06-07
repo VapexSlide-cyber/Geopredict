@@ -3,7 +3,6 @@ GeoPredict API — FastAPI Backend
 Capacité Portante des Fondations Superficielles
 Random Forest Pipeline — Eurocode 7
 Université Badji Mokhtar Annaba — Master 2 Géotechnique
-Sous la direction du Pr. Sbartai
 """
 
 from fastapi import FastAPI, HTTPException
@@ -12,6 +11,7 @@ from pydantic import BaseModel, Field
 from typing import Literal
 import joblib
 import numpy as np
+import pandas as pd
 import os
 
 # ─────────────────────────────────────────────
@@ -129,40 +129,60 @@ def predict(inp: PredictionInput):
         Rw1, Rw2, gamma_eff = compute_water_corrections(inp)
 
         # ── Stage 1 features ──
-        # Order: c_kPa, phi_deg, gamma_kNm3, gamma_sat, B_m, L_m, R_m,
-        #        Df_m, Zw_m, cas_nappe, Rw1, Rw2, gamma_eff_kNm3, Type_fond
-        X1 = np.array([[
-            inp.c_kPa, inp.phi_deg, inp.gamma_kNm3, inp.gamma_sat,
-            inp.B_m, inp.L_m, inp.R_m,
-            inp.Df_m, inp.Zw_m, inp.cas_nappe,
-            Rw1, Rw2, gamma_eff,
-            inp.Type_fond           # sklearn pipeline handles encoding
-        ]], dtype=object)
+        X1 = pd.DataFrame([{
+            "c_kPa":         inp.c_kPa,
+            "phi_deg":       inp.phi_deg,
+            "gamma_kNm3":    inp.gamma_kNm3,
+            "gamma_sat":     inp.gamma_sat,
+            "B_m":           inp.B_m,
+            "L_m":           inp.L_m,
+            "R_m":           inp.R_m,
+            "Df_m":          inp.Df_m,
+            "Zw_m":          inp.Zw_m,
+            "cas_nappe":     inp.cas_nappe,
+            "Rw1":           Rw1,
+            "Rw2":           Rw2,
+            "gamma_eff_kNm3": gamma_eff,
+            "Type_fond":     inp.Type_fond,
+        }])
 
         stage1_pred = model_stage1.predict(X1)[0]
         # Outputs: Nq, Nc, Ng, sq, sc, sg
         Nq_p, Nc_p, Ng_p, sq_p, sc_p, sg_p = [float(v) for v in stage1_pred]
 
         # ── Stage 2 — qu & q_adm features ──
-        # Order: c_kPa, phi_deg, gamma_kNm3, gamma_sat, B_m, L_m, R_m,
-        #        Df_m, Zw_m, cas_nappe, Rw1, Rw2, gamma_eff_kNm3, q_app_kPa,
-        #        Nq_pred, Nc_pred, Ng_pred, sq_pred, sc_pred, sg_pred, Type_fond
-        X2 = np.array([[
-            inp.c_kPa, inp.phi_deg, inp.gamma_kNm3, inp.gamma_sat,
-            inp.B_m, inp.L_m, inp.R_m,
-            inp.Df_m, inp.Zw_m, inp.cas_nappe,
-            Rw1, Rw2, gamma_eff,
-            inp.q_app_kPa,
-            Nq_p, Nc_p, Ng_p, sq_p, sc_p, sg_p,
-            inp.Type_fond
-        ]], dtype=object)
+        X2 = pd.DataFrame([{
+            "c_kPa":          inp.c_kPa,
+            "phi_deg":        inp.phi_deg,
+            "gamma_kNm3":     inp.gamma_kNm3,
+            "gamma_sat":      inp.gamma_sat,
+            "B_m":            inp.B_m,
+            "L_m":            inp.L_m,
+            "R_m":            inp.R_m,
+            "Df_m":           inp.Df_m,
+            "Zw_m":           inp.Zw_m,
+            "cas_nappe":      inp.cas_nappe,
+            "Rw1":            Rw1,
+            "Rw2":            Rw2,
+            "gamma_eff_kNm3": gamma_eff,
+            "q_app_kPa":      inp.q_app_kPa,
+            "Nq_pred":        Nq_p,
+            "Nc_pred":        Nc_p,
+            "Ng_pred":        Ng_p,
+            "sq_pred":        sq_p,
+            "sc_pred":        sc_p,
+            "sg_pred":        sg_p,
+            "Type_fond":      inp.Type_fond,
+        }])
 
         stage2_pred = model_stage2.predict(X2)[0]
         qu_p, qadm_p = float(stage2_pred[0]), float(stage2_pred[1])
 
         # ── Stage 2 — FS ──
-        # Features: qu_pred, q_app_kPa
-        X3 = np.array([[qu_p, inp.q_app_kPa]])
+        X3 = pd.DataFrame([{
+            "qu_pred":    qu_p,
+            "q_app_kPa":  inp.q_app_kPa,
+        }])
         FS_p = float(model_stage2fs.predict(X3)[0])
 
         # ── Safety status (from Excel legend) ──
