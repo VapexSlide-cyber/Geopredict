@@ -1,0 +1,3142 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr" data-theme="dark" data-lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>GeoPredict — Capacité Portante par IA | Eurocode 7</title>
+<meta name="description" content="Prédiction de la capacité portante des fondations superficielles par Machine Learning (Random Forest) — Conforme Eurocode 7"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Cairo:wght@400;600;700&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+/* ═══════════════════════════════════════════
+   CSS VARIABLES — DARK / LIGHT THEMES
+═══════════════════════════════════════════ */
+:root {
+  --bg0: #060d18;
+  --bg1: #0b1929;
+  --bg2: #102035;
+  --bg3: #162840;
+  --bg4: #1e3550;
+  --surface: #1a2e42;
+  --surface2: #223347;
+  --border: #2a4060;
+  --border2: #3a5070;
+  --text1: #e8eef5;
+  --text2: #9ab3cc;
+  --text3: #6a8aaa;
+  --accent: #ff8c00;
+  --accent2: #ffaa33;
+  --accent-glow: rgba(255,140,0,0.25);
+  --green: #00e676;
+  --green-dim: rgba(0,230,118,0.15);
+  --blue: #29b6f6;
+  --blue-dim: rgba(41,182,246,0.15);
+  --yellow: #ffeb3b;
+  --yellow-dim: rgba(255,235,59,0.15);
+  --red: #ff5252;
+  --red-dim: rgba(255,82,82,0.15);
+  --steel: #37474f;
+  --font-main: 'Rajdhani', sans-serif;
+  --font-display: 'Bebas Neue', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-ar: 'Cairo', sans-serif;
+  --radius: 12px;
+  --shadow: 0 8px 32px rgba(0,0,0,0.4);
+  --glow: 0 0 24px rgba(255,140,0,0.3);
+  --transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+
+[data-theme="light"] {
+  --bg0: #f0f2f5;
+  --bg1: #e8ecf0;
+  --bg2: #dde3ea;
+  --bg3: #d0d8e2;
+  --bg4: #c5cfda;
+  --surface: #ffffff;
+  --surface2: #f5f7fa;
+  --border: #c8d4e0;
+  --border2: #b0c0d0;
+  --text1: #1a2535;
+  --text2: #3a5068;
+  --text3: #6a8aaa;
+  --accent: #e07000;
+  --accent2: #c86000;
+  --accent-glow: rgba(224,112,0,0.15);
+  --green: #1b8a4a;
+  --green-dim: rgba(27,138,74,0.12);
+  --blue: #0277bd;
+  --blue-dim: rgba(2,119,189,0.12);
+  --yellow: #c47a00;
+  --yellow-dim: rgba(196,122,0,0.12);
+  --red: #c62828;
+  --red-dim: rgba(198,40,40,0.12);
+  --shadow: 0 4px 20px rgba(0,0,0,0.12);
+  --glow: 0 0 16px rgba(224,112,0,0.2);
+}
+
+/* ═══════════════════════════════════════════
+   RESET & BASE
+═══════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font-main);
+  background: var(--bg0);
+  color: var(--text1);
+  min-height: 100vh;
+  overflow-x: hidden;
+  transition: var(--transition);
+  font-size: 16px;
+}
+[data-lang="ar"] body, [data-lang="ar"] .form-grid, [data-lang="ar"] .section-title {
+  font-family: var(--font-ar);
+}
+
+/* ═══════════════════════════════════════════
+   SCROLLBAR
+═══════════════════════════════════════════ */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg1); }
+::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 3px; }
+
+/* ═══════════════════════════════════════════
+   NAVBAR
+═══════════════════════════════════════════ */
+.navbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 2rem;
+  height: 64px;
+  background: rgba(6,13,24,0.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  transition: var(--transition);
+}
+[data-theme="light"] .navbar { background: rgba(240,242,245,0.9); }
+
+.nav-logo {
+  display: flex; align-items: center; gap: 12px;
+  text-decoration: none;
+}
+.logo-icon {
+  width: 38px; height: 38px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  box-shadow: var(--glow);
+}
+.logo-text {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  letter-spacing: 2px;
+  color: var(--text1);
+}
+.logo-sub {
+  font-size: 0.6rem;
+  color: var(--accent);
+  letter-spacing: 1px;
+  margin-top: -4px;
+  font-family: var(--font-mono);
+}
+
+.nav-links {
+  display: flex; align-items: center; gap: 0.5rem;
+}
+.nav-link {
+  padding: 6px 14px;
+  color: var(--text2);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border-radius: 6px;
+  transition: var(--transition);
+}
+.nav-link:hover { color: var(--accent); background: var(--accent-glow); }
+
+.nav-controls {
+  display: flex; align-items: center; gap: 0.75rem;
+}
+
+/* Language switcher */
+.lang-switcher {
+  display: flex; gap: 4px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 3px;
+}
+.lang-btn {
+  padding: 4px 10px;
+  border: none; background: transparent;
+  color: var(--text3);
+  font-size: 0.75rem; font-weight: 700;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: var(--transition);
+  font-family: var(--font-main);
+}
+.lang-btn.active {
+  background: var(--accent);
+  color: #fff;
+}
+.lang-btn:hover:not(.active) { color: var(--text1); }
+
+/* Theme toggle */
+.theme-toggle {
+  width: 36px; height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--bg2);
+  color: var(--text2);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem;
+  transition: var(--transition);
+}
+.theme-toggle:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ═══════════════════════════════════════════
+   HERO SECTION
+═══════════════════════════════════════════ */
+.hero {
+  position: relative;
+  min-height: 100vh;
+  display: flex; align-items: center;
+  overflow: hidden;
+  padding-top: 64px;
+}
+
+.hero-bg {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(255,140,0,0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(41,182,246,0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 60% 80%, rgba(0,230,118,0.04) 0%, transparent 40%);
+}
+
+/* Hero right panel — animated geo scene */
+.hero-scene {
+  position: absolute; right: 0; top: 0; bottom: 0;
+  width: 48%;
+  overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+}
+.hero-canvas-wrap {
+  position: relative; width: 100%; height: 100%;
+}
+#hero-geo-canvas {
+  width: 100%; height: 100%;
+  display: block;
+}
+
+/* Foundation type tabs in hero */
+.hero-fond-tabs {
+  position: absolute; bottom: 2rem; left: 50%;
+  transform: translateX(-50%);
+  display: flex; gap: 8px;
+  background: rgba(6,13,24,0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 4px;
+  z-index: 5;
+}
+.hero-tab {
+  padding: 6px 16px;
+  border: none; background: transparent;
+  color: var(--text3);
+  font-size: 0.72rem; font-weight: 700;
+  letter-spacing: 1px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: var(--transition);
+  font-family: var(--font-mono);
+}
+.hero-tab.active { background: var(--accent); color: #fff; }
+.hero-tab:hover:not(.active) { color: var(--text1); }
+
+@keyframes slideIn {
+  from { transform: translateX(60px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.hero-content {
+  position: relative; z-index: 2;
+  max-width: 600px;
+  padding: 3rem 2rem 3rem 4rem;
+  animation: fadeUp 0.8s ease both;
+}
+@keyframes fadeUp {
+  from { transform: translateY(40px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 16px;
+  background: var(--accent-glow);
+  border: 1px solid var(--accent);
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 1.5rem;
+  font-family: var(--font-mono);
+}
+.badge-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
+
+.hero-title {
+  font-family: var(--font-display);
+  font-size: clamp(3.5rem, 7vw, 6rem);
+  line-height: 0.9;
+  letter-spacing: 4px;
+  margin-bottom: 0.5rem;
+  background: linear-gradient(135deg, var(--text1) 0%, var(--accent) 60%, var(--accent2) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.hero-subtitle {
+  font-size: 1.1rem;
+  color: var(--text2);
+  line-height: 1.6;
+  margin-bottom: 2rem;
+  font-weight: 500;
+}
+
+.hero-stats {
+  display: flex; gap: 2rem;
+  margin-bottom: 2.5rem;
+}
+.stat {
+  text-align: center;
+}
+.stat-val {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  color: var(--accent);
+  display: block;
+  line-height: 1;
+}
+.stat-label {
+  font-size: 0.7rem;
+  color: var(--text3);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+}
+
+.hero-cta {
+  display: flex; gap: 1rem; flex-wrap: wrap;
+}
+.btn-primary {
+  padding: 14px 32px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #fff;
+  border: none; border-radius: var(--radius);
+  font-size: 1rem; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase;
+  cursor: pointer;
+  transition: var(--transition);
+  text-decoration: none;
+  display: inline-flex; align-items: center; gap: 8px;
+  box-shadow: 0 4px 20px rgba(255,140,0,0.4);
+  font-family: var(--font-main);
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(255,140,0,0.5); }
+.btn-secondary {
+  padding: 14px 32px;
+  background: transparent;
+  color: var(--text1);
+  border: 1px solid var(--border2); border-radius: var(--radius);
+  font-size: 1rem; font-weight: 600;
+  letter-spacing: 1px; text-transform: uppercase;
+  cursor: pointer;
+  transition: var(--transition);
+  text-decoration: none;
+  font-family: var(--font-main);
+}
+.btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Scroll indicator */
+.scroll-hint {
+  position: absolute; bottom: 2rem; left: 50%;
+  transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  color: var(--text3);
+  font-size: 0.7rem; letter-spacing: 2px; text-transform: uppercase;
+  animation: bounce 2s infinite;
+}
+@keyframes bounce { 0%,100%{transform:translateX(-50%) translateY(0)} 50%{transform:translateX(-50%) translateY(-8px)} }
+.scroll-arrow { font-size: 1.2rem; }
+
+/* ═══════════════════════════════════════════
+   SECTION GENERIC
+═══════════════════════════════════════════ */
+.section {
+  padding: 5rem 2rem;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+.section-header {
+  text-align: center;
+  margin-bottom: 3.5rem;
+}
+.section-tag {
+  display: inline-block;
+  padding: 4px 14px;
+  background: var(--accent-glow);
+  border: 1px solid var(--accent);
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 1rem;
+  font-family: var(--font-mono);
+}
+.section-title {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  letter-spacing: 3px;
+  color: var(--text1);
+  margin-bottom: 0.75rem;
+}
+.section-desc {
+  color: var(--text2);
+  font-size: 1rem;
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.7;
+}
+
+/* Divider */
+.divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border2), transparent);
+  margin: 0 2rem;
+}
+
+/* ═══════════════════════════════════════════
+   PREDICTION FORM SECTION
+═══════════════════════════════════════════ */
+#predict-section {
+  background: var(--bg1);
+  padding: 5rem 0;
+}
+.predict-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+/* Blueprint grid background on form */
+.form-container {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  position: relative;
+}
+.form-container::before {
+  content: '';
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 40px 40px;
+  opacity: 0.15;
+  pointer-events: none;
+}
+
+.form-header {
+  padding: 1.5rem 2rem;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.form-title-block { display: flex; align-items: center; gap: 12px; }
+.form-icon { font-size: 1.5rem; }
+.form-title { font-family: var(--font-display); font-size: 1.5rem; letter-spacing: 2px; }
+.form-subtitle { font-size: 0.8rem; color: var(--text3); font-family: var(--font-mono); }
+.ec7-badge {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 14px;
+  background: var(--green-dim);
+  border: 1px solid var(--green);
+  border-radius: 20px;
+  font-size: 0.7rem; font-weight: 700;
+  color: var(--green);
+  font-family: var(--font-mono);
+}
+
+.form-body { padding: 2rem; position: relative; z-index: 1; }
+
+/* Column groups */
+.form-groups {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.form-group-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  transition: var(--transition);
+}
+.form-group-card:hover { border-color: var(--accent); }
+.group-title {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.75rem; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 1.2rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono);
+}
+
+/* Input field */
+.field {
+  margin-bottom: 1rem;
+}
+.field:last-child { margin-bottom: 0; }
+.field-label {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 6px;
+}
+.label-text {
+  font-size: 0.8rem; font-weight: 600;
+  color: var(--text2);
+  display: flex; align-items: center; gap: 6px;
+}
+.label-symbol {
+  font-family: var(--font-mono);
+  color: var(--accent);
+  font-size: 0.85rem;
+}
+.label-unit {
+  font-size: 0.7rem;
+  color: var(--text3);
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+}
+.field-input {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text1);
+  font-size: 0.9rem;
+  font-family: var(--font-mono);
+  transition: var(--transition);
+  outline: none;
+}
+.field-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+  background: var(--bg4);
+}
+.field-input::placeholder { color: var(--text3); }
+
+/* Select & Radio */
+.field-select {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text1);
+  font-size: 0.9rem;
+  transition: var(--transition);
+  outline: none;
+  cursor: pointer;
+  font-family: var(--font-main);
+}
+.field-select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+
+/* Foundation type visual cards */
+.fond-cards {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+.fond-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 8px;
+  text-align: center;
+  cursor: pointer;
+  transition: var(--transition);
+  background: var(--bg3);
+}
+.fond-card:hover { border-color: var(--accent); }
+.fond-card.selected {
+  border-color: var(--accent);
+  background: var(--accent-glow);
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+.fond-svg { width: 50px; height: 35px; margin-bottom: 4px; }
+.fond-label { font-size: 0.65rem; font-weight: 600; letter-spacing: 0.5px; color: var(--text2); }
+
+/* Water table visual */
+.nappe-cards {
+  display: flex; flex-direction: column; gap: 6px;
+}
+.nappe-card {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: var(--transition);
+  background: var(--bg3);
+}
+.nappe-card:hover { border-color: var(--blue); }
+.nappe-card.selected { border-color: var(--blue); background: var(--blue-dim); }
+.nappe-icon { font-size: 1.1rem; }
+.nappe-label { font-size: 0.75rem; font-weight: 600; color: var(--text2); }
+.nappe-desc { font-size: 0.65rem; color: var(--text3); }
+
+/* Calculate button */
+.calc-row {
+  display: flex; align-items: center; justify-content: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+.btn-calc {
+  padding: 18px 60px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #fff;
+  border: none; border-radius: var(--radius);
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  letter-spacing: 4px;
+  cursor: pointer;
+  transition: var(--transition);
+  box-shadow: 0 6px 30px rgba(255,140,0,0.4);
+  display: flex; align-items: center; gap: 12px;
+  position: relative; overflow: hidden;
+}
+.btn-calc::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, transparent, rgba(255,255,255,0.1), transparent);
+  transform: translateX(-100%);
+  transition: transform 0.5s;
+}
+.btn-calc:hover::before { transform: translateX(100%); }
+.btn-calc:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(255,140,0,0.5); }
+.btn-calc:active { transform: translateY(0); }
+
+.btn-reset {
+  padding: 18px 28px;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  color: var(--text2);
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.btn-reset:hover { border-color: var(--red); color: var(--red); }
+
+/* Loading spinner */
+.loading-overlay {
+  display: none;
+  position: absolute; inset: 0;
+  background: rgba(6,13,24,0.85);
+  border-radius: 20px;
+  z-index: 10;
+  align-items: center; justify-content: center;
+  flex-direction: column; gap: 1rem;
+}
+.loading-overlay.active { display: flex; }
+.loading-spinner {
+  width: 60px; height: 60px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text {
+  font-family: var(--font-mono);
+  color: var(--accent);
+  font-size: 0.9rem;
+  letter-spacing: 2px;
+  animation: flicker 1s infinite;
+}
+@keyframes flicker { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+/* ═══════════════════════════════════════════
+   RESULTS SECTION
+═══════════════════════════════════════════ */
+#results-section {
+  display: none;
+  background: var(--bg0);
+  padding: 4rem 0;
+  border-top: 1px solid var(--border);
+}
+#results-section.visible { display: block; animation: fadeUp 0.6s ease; }
+.results-inner { max-width: 1200px; margin: 0 auto; padding: 0 2rem; }
+
+/* Verdict banner */
+.verdict-banner {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1.5rem 2rem;
+  border-radius: 16px;
+  border: 2px solid;
+  margin-bottom: 2rem;
+  animation: fadeUp 0.5s ease;
+}
+.verdict-banner.green { border-color: var(--green); background: var(--green-dim); }
+.verdict-banner.blue { border-color: var(--blue); background: var(--blue-dim); }
+.verdict-banner.yellow { border-color: var(--yellow); background: var(--yellow-dim); }
+.verdict-banner.red { border-color: var(--red); background: var(--red-dim); }
+
+.verdict-left { display: flex; align-items: center; gap: 1rem; }
+.verdict-icon { font-size: 2.5rem; }
+.verdict-title { font-family: var(--font-display); font-size: 2rem; letter-spacing: 2px; }
+.verdict-sub { font-size: 0.85rem; color: var(--text2); font-family: var(--font-mono); }
+.verdict-right { text-align: right; }
+.verdict-fs { font-family: var(--font-display); font-size: 3rem; }
+.verdict-fs-label { font-size: 0.75rem; color: var(--text3); font-family: var(--font-mono); letter-spacing: 1px; }
+
+/* Results grid */
+.results-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+.result-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  transition: var(--transition);
+}
+.result-card:hover { border-color: var(--accent); }
+.result-card-title {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.7rem; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--text3);
+  margin-bottom: 1.2rem;
+  font-family: var(--font-mono);
+}
+
+/* Gauge meters */
+.gauges-row {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+.gauge-item { text-align: center; }
+.gauge-val {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  color: var(--accent);
+  display: block;
+  line-height: 1;
+}
+.gauge-name {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text3);
+  display: block;
+  margin-top: 4px;
+}
+.gauge-bar {
+  width: 100%;
+  height: 3px;
+  background: var(--bg3);
+  border-radius: 2px;
+  margin: 6px 0;
+  overflow: hidden;
+}
+.gauge-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  border-radius: 2px;
+  transition: width 1s ease;
+}
+
+/* Stage 2 big numbers */
+.stage2-grid {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+}
+.s2-item {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.2rem;
+  text-align: center;
+  transition: var(--transition);
+}
+.s2-item:hover { transform: translateY(-2px); }
+.s2-val {
+  font-family: var(--font-display);
+  font-size: 2.2rem;
+  display: block;
+  line-height: 1;
+}
+.s2-unit {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text3);
+  display: block;
+}
+.s2-name {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text2);
+  margin-top: 6px;
+  display: block;
+}
+
+/* Download / actions row */
+.results-actions {
+  display: flex; gap: 1rem; justify-content: center;
+  margin-top: 1.5rem;
+}
+.btn-download {
+  padding: 12px 28px;
+  background: linear-gradient(135deg, var(--green), #00c853);
+  color: #fff;
+  border: none; border-radius: var(--radius);
+  font-size: 0.9rem; font-weight: 700;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--font-main);
+}
+.btn-download:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,230,118,0.3); }
+
+/* ═══════════════════════════════════════════
+   FOUNDATION DRAWING CANVAS
+═══════════════════════════════════════════ */
+.drawing-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.drawing-title {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-bottom: 1rem;
+}
+#foundation-canvas {
+  width: 100%;
+  max-width: 600px;
+  display: block;
+  margin: 0 auto;
+  border-radius: 8px;
+}
+
+/* ═══════════════════════════════════════════
+   CHARTS SECTION
+═══════════════════════════════════════════ */
+#charts-section {
+  display: none;
+  background: var(--bg1);
+  padding: 4rem 0;
+  border-top: 1px solid var(--border);
+}
+#charts-section.visible { display: block; animation: fadeUp 0.6s ease; }
+.charts-inner { max-width: 1200px; margin: 0 auto; padding: 0 2rem; }
+.charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+.chart-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+}
+.chart-title {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-bottom: 1rem;
+  display: flex; align-items: center; gap: 8px;
+}
+.chart-title-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.chart-full { grid-column: span 2; }
+
+/* ═══════════════════════════════════════════
+   METHODOLOGY SECTION
+═══════════════════════════════════════════ */
+#methodology-section {
+  background: var(--bg0);
+  padding: 5rem 0;
+}
+.pipeline {
+  display: flex; align-items: center; justify-content: center;
+  flex-wrap: wrap;
+  gap: 0;
+  margin-top: 3rem;
+}
+.pipe-step {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem 1.2rem;
+  text-align: center;
+  width: 160px;
+  transition: var(--transition);
+  cursor: default;
+  position: relative;
+}
+.pipe-step:hover {
+  border-color: var(--accent);
+  transform: translateY(-4px);
+  box-shadow: var(--glow);
+}
+.pipe-icon { font-size: 2rem; margin-bottom: 0.5rem; display: block; }
+.pipe-name {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+.pipe-desc { font-size: 0.75rem; color: var(--text3); line-height: 1.4; }
+.pipe-r2 {
+  position: absolute; top: -10px; right: -10px;
+  background: var(--green);
+  color: #000;
+  font-size: 0.6rem; font-weight: 700;
+  font-family: var(--font-mono);
+  padding: 2px 6px;
+  border-radius: 10px;
+}
+
+.pipe-arrow {
+  font-size: 1.5rem;
+  color: var(--border2);
+  margin: 0 4px;
+}
+
+/* Metrics cards */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-top: 3rem;
+}
+.metric-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  text-align: center;
+  transition: var(--transition);
+}
+.metric-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.metric-val {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  color: var(--accent);
+  display: block;
+}
+.metric-label {
+  font-size: 0.75rem;
+  color: var(--text3);
+  font-family: var(--font-mono);
+  letter-spacing: 1px;
+}
+
+/* ═══════════════════════════════════════════
+   CHATBOT
+═══════════════════════════════════════════ */
+.chatbot-fab {
+  position: fixed; bottom: 2rem; right: 2rem;
+  width: 60px; height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border: none;
+  color: #fff;
+  font-size: 1.6rem;
+  cursor: pointer;
+  box-shadow: 0 6px 24px rgba(255,140,0,0.5);
+  transition: var(--transition);
+  z-index: 500;
+  display: flex; align-items: center; justify-content: center;
+}
+.chatbot-fab:hover { transform: scale(1.1); }
+.chatbot-badge {
+  position: absolute; top: -4px; right: -4px;
+  width: 18px; height: 18px;
+  background: var(--green);
+  border-radius: 50%;
+  font-size: 0.6rem; font-weight: 700;
+  color: #000;
+  display: flex; align-items: center; justify-content: center;
+  animation: pulse 2s infinite;
+}
+
+.chatbot-panel {
+  position: fixed; bottom: 6rem; right: 2rem;
+  width: 380px; height: 550px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+  z-index: 499;
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+  animation: slideUp 0.3s ease;
+}
+.chatbot-panel.open { display: flex; }
+@keyframes slideUp { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
+
+.chat-header {
+  padding: 1rem 1.5rem;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+}
+.chat-avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem;
+}
+.chat-title { font-weight: 700; font-size: 0.9rem; }
+.chat-subtitle { font-size: 0.7rem; color: var(--green); font-family: var(--font-mono); }
+.chat-close {
+  margin-left: auto;
+  background: none; border: none;
+  color: var(--text3); font-size: 1.2rem;
+  cursor: pointer; transition: var(--transition);
+}
+.chat-close:hover { color: var(--red); }
+
+.chat-lang-row {
+  display: flex; gap: 4px;
+  padding: 8px 1rem;
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+}
+.chat-lang-btn {
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text3);
+  font-size: 0.7rem; font-weight: 700;
+  cursor: pointer; transition: var(--transition);
+}
+.chat-lang-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+  display: flex; flex-direction: column; gap: 0.75rem;
+}
+.chat-msg {
+  max-width: 88%;
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  animation: fadeUp 0.3s ease;
+}
+.chat-msg.bot {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 4px;
+  align-self: flex-start;
+  color: var(--text1);
+}
+.chat-msg.user {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #fff;
+  border-bottom-right-radius: 4px;
+  align-self: flex-end;
+}
+.chat-ref {
+  font-size: 0.68rem;
+  font-family: var(--font-mono);
+  color: var(--accent);
+  margin-top: 6px;
+  display: block;
+  border-top: 1px solid var(--border);
+  padding-top: 4px;
+}
+.chat-typing {
+  display: flex; gap: 4px; align-items: center;
+  padding: 10px 14px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 14px; border-bottom-left-radius: 4px;
+  width: fit-content;
+  align-self: flex-start;
+}
+.chat-typing span {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--text3);
+  animation: typing 1s infinite;
+}
+.chat-typing span:nth-child(2) { animation-delay: 0.2s; }
+.chat-typing span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes typing { 0%,100%{opacity:0.3;transform:translateY(0)} 50%{opacity:1;transform:translateY(-3px)} }
+
+.chat-input-row {
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--border);
+  display: flex; gap: 8px;
+  background: var(--bg2);
+}
+.chat-input {
+  flex: 1;
+  padding: 10px 14px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  color: var(--text1);
+  font-size: 0.82rem;
+  outline: none;
+  transition: var(--transition);
+  font-family: var(--font-main);
+}
+.chat-input:focus { border-color: var(--accent); }
+.chat-send {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border: none; color: #fff;
+  font-size: 1rem; cursor: pointer;
+  transition: var(--transition);
+  display: flex; align-items: center; justify-content: center;
+}
+.chat-send:hover { transform: scale(1.1); }
+
+/* Quick questions */
+.chat-quick {
+  display: flex; flex-wrap: wrap; gap: 4px;
+  padding: 0 1rem 0.5rem;
+}
+.chat-quick-btn {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg3);
+  color: var(--text3);
+  font-size: 0.65rem;
+  cursor: pointer;
+  transition: var(--transition);
+  font-family: var(--font-main);
+}
+.chat-quick-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ═══════════════════════════════════════════
+   ABOUT SECTION
+═══════════════════════════════════════════ */
+#about-section {
+  background: var(--bg1);
+  padding: 5rem 0;
+}
+.about-inner { max-width: 1200px; margin: 0 auto; padding: 0 2rem; }
+.about-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 3rem; align-items: center;
+}
+.about-info .univ-badge {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 10px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 1.5rem;
+}
+.univ-icon { font-size: 2rem; }
+.univ-name { font-size: 0.85rem; font-weight: 700; color: var(--text1); }
+.univ-dept { font-size: 0.7rem; color: var(--text3); }
+
+.about-text { color: var(--text2); line-height: 1.8; margin-bottom: 1rem; }
+
+.supervisor-card {
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  display: flex; align-items: center; gap: 1rem;
+}
+.supervisor-avatar {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+.supervisor-name { font-weight: 700; font-size: 1rem; color: var(--text1); }
+.supervisor-title { font-size: 0.75rem; color: var(--text3); }
+
+.about-tech-stack {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+.tech-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.2rem;
+  transition: var(--transition);
+}
+.tech-card:hover { border-color: var(--accent); }
+.tech-icon { font-size: 1.5rem; margin-bottom: 0.5rem; display: block; }
+.tech-name { font-weight: 700; font-size: 0.85rem; color: var(--text1); }
+.tech-desc { font-size: 0.7rem; color: var(--text3); margin-top: 4px; }
+
+/* ═══════════════════════════════════════════
+   FOOTER
+═══════════════════════════════════════════ */
+footer {
+  background: var(--bg0);
+  border-top: 1px solid var(--border);
+  padding: 2rem;
+  text-align: center;
+}
+.footer-logo {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  letter-spacing: 4px;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.footer-text { font-size: 0.8rem; color: var(--text3); line-height: 1.6; }
+.footer-links {
+  display: flex; justify-content: center; gap: 1.5rem;
+  margin-top: 1rem;
+}
+.footer-link { color: var(--text3); text-decoration: none; font-size: 0.8rem; transition: var(--transition); }
+.footer-link:hover { color: var(--accent); }
+
+/* ═══════════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════════ */
+@media (max-width: 1024px) {
+  .form-groups { grid-template-columns: 1fr 1fr; }
+  .results-grid { grid-template-columns: 1fr; }
+  .charts-grid { grid-template-columns: 1fr; }
+  .chart-full { grid-column: span 1; }
+  .metrics-grid { grid-template-columns: 1fr 1fr; }
+  .about-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 768px) {
+  .navbar { padding: 0 1rem; }
+  .nav-links { display: none; }
+  .hero-content { padding: 2rem 1.5rem; }
+  .hero-scene { display: none; }
+  .form-groups { grid-template-columns: 1fr; }
+  .stage2-grid { grid-template-columns: 1fr; }
+  .gauges-row { grid-template-columns: 1fr 1fr; }
+  .pipeline { flex-direction: column; }
+  .pipe-arrow { transform: rotate(90deg); }
+  .hero-stats { gap: 1rem; }
+  .chatbot-panel { width: calc(100vw - 2rem); right: 1rem; }
+  .about-tech-stack { grid-template-columns: 1fr; }
+  .fond-cards { grid-template-columns: 1fr; }
+}
+
+/* RTL support for Arabic */
+[data-lang="ar"] { direction: rtl; }
+[data-lang="ar"] .navbar { flex-direction: row-reverse; }
+[data-lang="ar"] .hero-content { padding-left: 2rem; padding-right: 4rem; }
+[data-lang="ar"] .chat-msg.bot { border-radius: 14px; border-bottom-right-radius: 4px; border-bottom-left-radius: 14px; align-self: flex-end; }
+[data-lang="ar"] .chat-msg.user { border-radius: 14px; border-bottom-left-radius: 4px; border-bottom-right-radius: 14px; align-self: flex-start; }
+[data-lang="ar"] * { font-family: var(--font-ar), sans-serif; }
+[data-lang="ar"] .logo-text,
+[data-lang="ar"] .section-title,
+[data-lang="ar"] .hero-title,
+[data-lang="ar"] .footer-logo { font-family: var(--font-display), var(--font-ar); }
+[data-lang="ar"] .label-symbol,
+[data-lang="ar"] .label-unit,
+[data-lang="ar"] .field-input,
+[data-lang="ar"] .gauge-val,
+[data-lang="ar"] .s2-val,
+[data-lang="ar"] .gauge-name,
+[data-lang="ar"] .chat-ref { font-family: var(--font-mono); direction: ltr; text-align: left; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ NAVBAR ═══════════════ -->
+<nav class="navbar">
+  <a class="nav-logo" href="#">
+    <div class="logo-icon">🏗️</div>
+    <div>
+      <div class="logo-text">GEOPREDICT</div>
+      <div class="logo-sub">BEARING CAPACITY · EUROCODE 7</div>
+    </div>
+  </a>
+
+  <div class="nav-links">
+    <a href="#predict-section" class="nav-link" data-i18n="nav.predict">Prédiction</a>
+    <a href="#charts-section" class="nav-link" data-i18n="nav.charts">Courbes</a>
+    <a href="#methodology-section" class="nav-link" data-i18n="nav.method">Méthodologie</a>
+    <a href="#about-section" class="nav-link" data-i18n="nav.about">À Propos</a>
+  </div>
+
+  <div class="nav-controls">
+    <div class="lang-switcher">
+      <button class="lang-btn active" onclick="setLang('fr')">FR</button>
+      <button class="lang-btn" onclick="setLang('en')">EN</button>
+      <button class="lang-btn" onclick="setLang('ar')">ع</button>
+    </div>
+    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">🌙</button>
+  </div>
+</nav>
+
+<!-- ═══════════════ HERO ═══════════════ -->
+<section class="hero" id="home">
+  <div class="hero-bg"></div>
+
+  <!-- Animated geo scene right panel -->
+  <div class="hero-scene">
+    <div class="hero-canvas-wrap">
+      <canvas id="hero-geo-canvas"></canvas>
+      <div class="hero-fond-tabs">
+        <button class="hero-tab active" onclick="setHeroFond('rect',this)">Rectangulaire</button>
+        <button class="hero-tab" onclick="setHeroFond('square',this)">Carrée</button>
+        <button class="hero-tab" onclick="setHeroFond('circ',this)">Circulaire</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero-content">
+    <div class="hero-badge">
+      <span class="badge-dot"></span>
+      <span data-i18n="hero.badge">Conforme Eurocode 7 · Intelligence Artificielle</span>
+    </div>
+    <h1 class="hero-title">GEO<br>PREDICT</h1>
+    <p class="hero-subtitle" data-i18n="hero.subtitle">
+      Prédiction de la capacité portante des fondations superficielles<br>
+      par Intelligence Artificielle · Random Forest ML
+    </p>
+    <div class="hero-stats">
+      <div class="stat">
+        <span class="stat-val">0.9659</span>
+        <span class="stat-label">R² Max</span>
+      </div>
+      <div class="stat">
+        <span class="stat-val">5000+</span>
+        <span class="stat-label" data-i18n="hero.samples">Échantillons</span>
+      </div>
+      <div class="stat">
+        <span class="stat-val">3</span>
+        <span class="stat-label" data-i18n="hero.stages">Modèles RF</span>
+      </div>
+    </div>
+    <div class="hero-cta">
+      <a href="#predict-section" class="btn-primary" data-i18n="hero.cta1">⚡ Calculer Maintenant</a>
+      <a href="#methodology-section" class="btn-secondary" data-i18n="hero.cta2">Voir la Méthode</a>
+    </div>
+  </div>
+
+  <div class="scroll-hint">
+    <span class="scroll-arrow">↓</span>
+    <span data-i18n="hero.scroll">Défiler</span>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══════════════ PREDICTION FORM ═══════════════ -->
+<section id="predict-section">
+  <div class="predict-inner">
+    <div class="section-header">
+      <div class="section-tag" data-i18n="form.tag">Moteur de Prédiction</div>
+      <h2 class="section-title" data-i18n="form.title">CALCUL DE CAPACITÉ PORTANTE</h2>
+      <p class="section-desc" data-i18n="form.desc">Entrez les paramètres géotechniques pour obtenir la prédiction instantanée par Random Forest</p>
+    </div>
+
+    <div class="form-container">
+      <div class="loading-overlay" id="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text" data-i18n="form.loading">CALCUL EN COURS...</div>
+      </div>
+
+      <div class="form-header">
+        <div class="form-title-block">
+          <span class="form-icon">📐</span>
+          <div>
+            <div class="form-title" data-i18n="form.header">PARAMÈTRES GÉOTECHNIQUES</div>
+            <div class="form-subtitle">Eurocode 7 · Random Forest Pipeline</div>
+          </div>
+        </div>
+        <div class="ec7-badge">✓ EUROCODE 7</div>
+      </div>
+
+      <div class="form-body">
+        <div class="form-groups">
+
+          <!-- GROUP 1 : SOL -->
+          <div class="form-group-card">
+            <div class="group-title">🪨 <span data-i18n="group.soil">Paramètres du Sol</span></div>
+            <div class="field">
+              <div class="field-label">
+                <span class="label-text"><span class="label-symbol">c'</span> <span data-i18n="param.c">Cohésion</span></span>
+                <span class="label-unit">kPa</span>
+              </div>
+              <input type="number" class="field-input" id="c_kPa" placeholder="0 – 100" min="0" step="0.1" value="16.87"/>
+            </div>
+            <div class="field">
+              <div class="field-label">
+                <span class="label-text"><span class="label-symbol">φ'</span> <span data-i18n="param.phi">Angle de frottement</span></span>
+                <span class="label-unit">°</span>
+              </div>
+              <input type="number" class="field-input" id="phi_deg" placeholder="0 – 45" min="0" max="50" step="0.1" value="22.01"/>
+            </div>
+            <div class="field">
+              <div class="field-label">
+                <span class="label-text"><span class="label-symbol">γ</span> <span data-i18n="param.gamma">Poids volumique</span></span>
+                <span class="label-unit">kN/m³</span>
+              </div>
+              <input type="number" class="field-input" id="gamma_kNm3" placeholder="16 – 22" min="0" step="0.1" value="18.75"/>
+            </div>
+            <div class="field">
+              <div class="field-label">
+                <span class="label-text"><span class="label-symbol">γsat</span> <span data-i18n="param.gammasat">Poids saturé</span></span>
+                <span class="label-unit">kN/m³</span>
+              </div>
+              <input type="number" class="field-input" id="gamma_sat" placeholder="18 – 24" min="0" step="0.1" value="21.24"/>
+            </div>
+          </div>
+
+          <!-- GROUP 2 : FONDATION -->
+          <div class="form-group-card">
+            <div class="group-title">🏗️ <span data-i18n="group.found">Géométrie Fondation</span></div>
+
+            <!-- Foundation type visual selector -->
+            <div class="field">
+              <div class="field-label"><span class="label-text" data-i18n="param.type">Type de fondation</span></div>
+              <div class="fond-cards">
+                <div class="fond-card selected" onclick="selectFond('Rectangulaire',this)">
+                  <svg class="fond-svg" viewBox="0 0 50 35">
+                    <rect x="5" y="2" width="40" height="14" fill="none" stroke="#ff8c00" stroke-width="2"/>
+                    <line x1="5" y1="16" x2="45" y2="16" stroke="#6a8aaa" stroke-width="1" stroke-dasharray="3"/>
+                    <text x="25" y="28" text-anchor="middle" fill="#6a8aaa" font-size="7">B × L</text>
+                  </svg>
+                  <div class="fond-label" data-i18n="type.rect">Rect.</div>
+                </div>
+                <div class="fond-card" onclick="selectFond('Carrée',this)">
+                  <svg class="fond-svg" viewBox="0 0 50 35">
+                    <rect x="10" y="2" width="30" height="14" fill="none" stroke="#ff8c00" stroke-width="2"/>
+                    <line x1="10" y1="16" x2="40" y2="16" stroke="#6a8aaa" stroke-width="1" stroke-dasharray="3"/>
+                    <text x="25" y="28" text-anchor="middle" fill="#6a8aaa" font-size="7">B = L</text>
+                  </svg>
+                  <div class="fond-label" data-i18n="type.square">Carrée</div>
+                </div>
+                <div class="fond-card" onclick="selectFond('Circulaire',this)">
+                  <svg class="fond-svg" viewBox="0 0 50 35">
+                    <ellipse cx="25" cy="9" rx="18" ry="7" fill="none" stroke="#ff8c00" stroke-width="2"/>
+                    <line x1="7" y1="16" x2="43" y2="16" stroke="#6a8aaa" stroke-width="1" stroke-dasharray="3"/>
+                    <text x="25" y="28" text-anchor="middle" fill="#6a8aaa" font-size="7">R</text>
+                  </svg>
+                  <div class="fond-label" data-i18n="type.circ">Circ.</div>
+                </div>
+              </div>
+              <input type="hidden" id="Type_fond" value="Rectangulaire"/>
+            </div>
+
+            <div class="field" id="field-B">
+              <div class="field-label">
+                <span class="label-text"><span class="label-symbol">B</span> <span data-i18n="param.B">Largeur</span></span>
+                <span class="label-unit">m</span>
+              </div>
+              <input type="number" class="field-input" id="B_m" placeholder="0.5 – 5" min="0" step="0.01" value="1.52"/>
+            </div>
+            <div class="field" id="field-L">
+              <div class="field-label">
+                <span class="label-text"><span class="label-symbol">L</span> <span data-i18n="param.L">Longueur</span></span>
+                <span class="label-unit">m</span>
+              </div>
+              <input type="number" class="field-input" id="L_m" placeholder="0.5 – 8" min="0" step="0.01" value="2.0"/>
+            </div>
+            <div class="field" id="field-R" style="display:none">
+              <div class="field-label">
+                <span class="label-text"><span class="label-symbol">R</span> <span data-i18n="param.R">Rayon</span></span>
+                <span class="label-unit">m</span>
+              </div>
+              <input type="number" class="field-input" id="R_m" placeholder="0.5 – 3" min="0" step="0.01" value="0"/>
+            </div>
+            <div class="field">
+              <div class="field-label">
+                <span class="label-text"><span class="label-symbol">Df</span> <span data-i18n="param.Df">Encastrement</span></span>
+                <span class="label-unit">m</span>
+              </div>
+              <input type="number" class="field-input" id="Df_m" placeholder="0.5 – 3" min="0.1" step="0.01" value="1.58"/>
+            </div>
+          </div>
+
+          <!-- GROUP 3 : NAPPE + CHARGE -->
+          <div class="form-group-card">
+            <div class="group-title">💧 <span data-i18n="group.water">Nappe & Charge</span></div>
+
+            <div class="field">
+              <div class="field-label">
+                <span class="label-text"><span class="label-symbol">Zw</span> <span data-i18n="param.Zw">Prof. nappe phréatique</span></span>
+                <span class="label-unit">m</span>
+              </div>
+              <input type="number" class="field-input" id="Zw_m" placeholder="0 – 10" min="0" step="0.01" value="1.02" oninput="autoSelectNappe()"/>
+            </div>
+
+            <!-- Auto nappe indicator -->
+            <div id="nappe-indicator" style="margin-bottom:1rem">
+              <div style="font-size:0.7rem;color:var(--text3);font-family:var(--font-mono);letter-spacing:1px;margin-bottom:6px" data-i18n="param.nappe">CAS NAPPE — DÉTECTÉ AUTOMATIQUEMENT</div>
+              <div class="nappe-cards">
+                <div class="nappe-card" id="nappe-card-0">
+                  <span class="nappe-icon">🏜️</span>
+                  <div><div class="nappe-label" data-i18n="nappe.0">Cas 0 — Sans influence</div><div class="nappe-desc" id="nappe-desc-0">Zw ≥ Df + B</div></div>
+                  <span id="nappe-check-0" style="margin-left:auto;font-size:1rem;display:none">✓</span>
+                </div>
+                <div class="nappe-card" id="nappe-card-1">
+                  <span class="nappe-icon">🌊</span>
+                  <div><div class="nappe-label" data-i18n="nappe.1">Cas 1 — Nappe ≤ Df</div><div class="nappe-desc" id="nappe-desc-1">Au-dessus de la fondation</div></div>
+                  <span id="nappe-check-1" style="margin-left:auto;font-size:1rem;display:none">✓</span>
+                </div>
+                <div class="nappe-card" id="nappe-card-2">
+                  <span class="nappe-icon">💧</span>
+                  <div><div class="nappe-label" data-i18n="nappe.2">Cas 2 — Dans zone B</div><div class="nappe-desc" id="nappe-desc-2">Df &lt; Zw &lt; Df + B</div></div>
+                  <span id="nappe-check-2" style="margin-left:auto;font-size:1rem;display:none">✓</span>
+                </div>
+              </div>
+            </div>
+              <input type="hidden" id="cas_nappe" value="0"/>
+
+            <div class="field">
+              <div class="field-label">
+                <span class="label-text"><span class="label-symbol">q_app</span> <span data-i18n="param.qapp">Charge appliquée</span></span>
+                <span class="label-unit">kPa</span>
+              </div>
+              <input type="number" class="field-input" id="q_app_kPa" placeholder="50 – 500" min="0.1" step="0.1" value="131.82"/>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="calc-row">
+          <button class="btn-reset" onclick="resetForm()" title="Réinitialiser">↺</button>
+          <button class="btn-calc" onclick="calculate()">
+            <span>⚡</span>
+            <span data-i18n="form.calc">CALCULER</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ RESULTS ═══════════════ -->
+<section id="results-section">
+  <div class="results-inner">
+
+    <div class="section-header" style="margin-bottom:2rem">
+      <div class="section-tag" data-i18n="results.tag">Résultats de Prédiction</div>
+      <h2 class="section-title" data-i18n="results.title">ANALYSE STRUCTURELLE</h2>
+    </div>
+
+    <!-- Verdict -->
+    <div class="verdict-banner" id="verdict-banner">
+      <div class="verdict-left">
+        <span class="verdict-icon" id="verdict-icon">✅</span>
+        <div>
+          <div class="verdict-title" id="verdict-title">—</div>
+          <div class="verdict-sub" id="verdict-sub">FS · Facteur de Sécurité</div>
+        </div>
+      </div>
+      <div class="verdict-right">
+        <div class="verdict-fs" id="verdict-fs">—</div>
+        <div class="verdict-fs-label">FACTEUR DE SÉCURITÉ</div>
+      </div>
+    </div>
+
+    <!-- Results grid -->
+    <div class="results-grid">
+
+      <!-- Stage 1 -->
+      <div class="result-card">
+        <div class="result-card-title">📊 <span data-i18n="results.stage1">Stage 1 — Facteurs de portance & forme</span> <span style="margin-left:auto;font-size:0.6rem;color:var(--green)">R²≈0.96</span></div>
+        <div class="gauges-row">
+          <div class="gauge-item">
+            <span class="gauge-val" id="r-Nq">—</span>
+            <div class="gauge-bar"><div class="gauge-fill" id="bar-Nq" style="width:0%"></div></div>
+            <span class="gauge-name">Nq</span>
+          </div>
+          <div class="gauge-item">
+            <span class="gauge-val" id="r-Nc">—</span>
+            <div class="gauge-bar"><div class="gauge-fill" id="bar-Nc" style="width:0%"></div></div>
+            <span class="gauge-name">Nc</span>
+          </div>
+          <div class="gauge-item">
+            <span class="gauge-val" id="r-Ng">—</span>
+            <div class="gauge-bar"><div class="gauge-fill" id="bar-Ng" style="width:0%"></div></div>
+            <span class="gauge-name">Nγ</span>
+          </div>
+          <div class="gauge-item">
+            <span class="gauge-val" id="r-sq">—</span>
+            <div class="gauge-bar"><div class="gauge-fill" id="bar-sq" style="width:0%"></div></div>
+            <span class="gauge-name">sq</span>
+          </div>
+          <div class="gauge-item">
+            <span class="gauge-val" id="r-sc">—</span>
+            <div class="gauge-bar"><div class="gauge-fill" id="bar-sc" style="width:0%"></div></div>
+            <span class="gauge-name">sc</span>
+          </div>
+          <div class="gauge-item">
+            <span class="gauge-val" id="r-sg">—</span>
+            <div class="gauge-bar"><div class="gauge-fill" id="bar-sg" style="width:0%"></div></div>
+            <span class="gauge-name">sγ</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stage 2 -->
+      <div class="result-card">
+        <div class="result-card-title">🏗️ <span data-i18n="results.stage2">Stage 2 — Capacité portante</span> <span style="margin-left:auto;font-size:0.6rem;color:var(--green)">R²≈0.9659</span></div>
+        <div class="stage2-grid">
+          <div class="s2-item" style="border-color:var(--accent)">
+            <span class="s2-val" id="r-qu" style="color:var(--accent)">—</span>
+            <span class="s2-unit">kPa</span>
+            <span class="s2-name">qu — Ultime</span>
+          </div>
+          <div class="s2-item" style="border-color:var(--green)">
+            <span class="s2-val" id="r-qadm" style="color:var(--green)">—</span>
+            <span class="s2-unit">kPa</span>
+            <span class="s2-name">q_adm — Admissible</span>
+          </div>
+          <div class="s2-item">
+            <span class="s2-val" id="r-fs" style="color:var(--blue)">—</span>
+            <span class="s2-unit"></span>
+            <span class="s2-name">FS — Sécurité</span>
+          </div>
+        </div>
+
+        <!-- Correction factors -->
+        <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)">
+          <div style="font-size:0.65rem;color:var(--text3);font-family:var(--font-mono);letter-spacing:1px;margin-bottom:8px">CORRECTIONS NAPPE</div>
+          <div style="display:flex;gap:1rem;flex-wrap:wrap">
+            <span style="font-size:0.8rem">Rw1 = <strong id="r-rw1" style="color:var(--accent)">—</strong></span>
+            <span style="font-size:0.8rem">Rw2 = <strong id="r-rw2" style="color:var(--accent)">—</strong></span>
+            <span style="font-size:0.8rem">γeff = <strong id="r-geff" style="color:var(--accent)">—</strong> kN/m³</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Foundation Drawing -->
+    <div class="drawing-section">
+      <div class="drawing-title">✏️ <span data-i18n="drawing.title">DESSIN SCHÉMATIQUE — FONDATION (AUTO-GÉNÉRÉ)</span></div>
+      <canvas id="foundation-canvas" width="700" height="400"></canvas>
+    </div>
+
+    <!-- Action buttons -->
+    <div class="results-actions">
+      <button class="btn-download" onclick="downloadPDF()">
+        📄 <span data-i18n="btn.pdf">Télécharger Rapport PDF</span>
+      </button>
+      <button class="btn-secondary" onclick="document.getElementById('charts-section').scrollIntoView({behavior:'smooth'})">
+        📊 <span data-i18n="btn.charts">Voir les Courbes</span>
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ CHARTS ═══════════════ -->
+<section id="charts-section">
+  <div class="charts-inner">
+    <div class="section-header">
+      <div class="section-tag" data-i18n="charts.tag">Analyses Graphiques</div>
+      <h2 class="section-title" data-i18n="charts.title">COURBES DE SENSIBILITÉ</h2>
+      <p class="section-desc" data-i18n="charts.desc">Analyse de la variation des résultats selon les paramètres clés</p>
+    </div>
+
+    <div class="charts-grid">
+      <!-- 1. Mohr-Coulomb -->
+      <div class="chart-card">
+        <div class="chart-title"><span class="chart-title-dot"></span><span data-i18n="chart.mohr">Enveloppe de Mohr-Coulomb</span></div>
+        <canvas id="chart-mohr" height="250"></canvas>
+      </div>
+
+      <!-- 2. FS vs phi -->
+      <div class="chart-card">
+        <div class="chart-title"><span class="chart-title-dot" style="background:var(--blue)"></span><span data-i18n="chart.fsphi">FS vs φ (Angle de frottement)</span></div>
+        <canvas id="chart-fsphi" height="250"></canvas>
+      </div>
+
+      <!-- 3. qu vs Df -->
+      <div class="chart-card">
+        <div class="chart-title"><span class="chart-title-dot" style="background:var(--green)"></span><span data-i18n="chart.qudf">qu vs Df (Profondeur)</span></div>
+        <canvas id="chart-qudf" height="250"></canvas>
+      </div>
+
+      <!-- 4. FS vs q_app -->
+      <div class="chart-card">
+        <div class="chart-title"><span class="chart-title-dot" style="background:var(--red)"></span><span data-i18n="chart.fsqapp">FS vs q_app (Charge)</span></div>
+        <canvas id="chart-fsqapp" height="250"></canvas>
+      </div>
+
+      <!-- 5. Sensitivity Radar — full width -->
+      <div class="chart-card chart-full">
+        <div class="chart-title"><span class="chart-title-dot" style="background:var(--accent2)"></span><span data-i18n="chart.radar">Sensibilité des Paramètres (Feature Importance RF Stage 1)</span></div>
+        <canvas id="chart-radar" height="150"></canvas>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ METHODOLOGY ═══════════════ -->
+<section id="methodology-section">
+  <div class="section">
+    <div class="section-header">
+      <div class="section-tag" data-i18n="method.tag">Pipeline ML</div>
+      <h2 class="section-title" data-i18n="method.title">MÉTHODOLOGIE</h2>
+      <p class="section-desc" data-i18n="method.desc">Architecture du pipeline de prédiction en 2 étapes par Random Forest</p>
+    </div>
+
+    <!-- Pipeline -->
+    <div class="pipeline">
+      <div class="pipe-step">
+        <span class="pipe-icon">📥</span>
+        <div class="pipe-name" data-i18n="pipe.input">Entrées</div>
+        <div class="pipe-desc">c, φ, γ, Df, B, L, R, Zw, q_app</div>
+      </div>
+      <span class="pipe-arrow">→</span>
+      <div class="pipe-step">
+        <span class="pipe-icon">⚙️</span>
+        <div class="pipe-name" data-i18n="pipe.fe">Prétraitement</div>
+        <div class="pipe-desc">Rw1, Rw2, γeff, encodage</div>
+      </div>
+      <span class="pipe-arrow">→</span>
+      <div class="pipe-step">
+        <span class="pipe-icon">🌲</span>
+        <div class="pipe-name">Random Forest</div>
+        <div class="pipe-desc">Nq, Nc, Nγ · qu, q_adm, FS</div>
+        <span class="pipe-r2">R²=0.9659</span>
+      </div>
+      <span class="pipe-arrow">→</span>
+      <div class="pipe-step">
+        <span class="pipe-icon">📋</span>
+        <div class="pipe-name">Eurocode 7</div>
+        <div class="pipe-desc">Vérification & Verdict</div>
+      </div>
+      <span class="pipe-arrow">→</span>
+      <div class="pipe-step">
+        <span class="pipe-icon">📊</span>
+        <div class="pipe-name" data-i18n="pipe.results">Résultats</div>
+        <div class="pipe-desc">Rapport + Courbes + Dessin</div>
+      </div>
+    </div>
+
+    <!-- Metrics -->
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <span class="metric-val">0.9659</span>
+        <span class="metric-label">R² MAX</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-val">0.9578</span>
+        <span class="metric-label">R² q_adm</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-val">EC7</span>
+        <span class="metric-label">NORME</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-val">3</span>
+        <span class="metric-label">MODÈLES IA</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══════════════ ABOUT ═══════════════ -->
+<section id="about-section">
+  <div class="about-inner">
+    <div class="section-header">
+      <div class="section-tag" data-i18n="about.tag">Projet Académique</div>
+      <h2 class="section-title" data-i18n="about.title">À PROPOS</h2>
+    </div>
+
+    <div class="about-grid">
+      <div class="about-info">
+        <div class="univ-badge">
+          <span class="univ-icon">🎓</span>
+          <div>
+            <div class="univ-name">Université Badji Mokhtar — Annaba</div>
+            <div class="univ-dept">Faculté de Technologie · Département Génie Civil</div>
+          </div>
+        </div>
+
+        <p class="about-text" data-i18n="about.p1">
+          GeoPredict est développé dans le cadre d'un mémoire de Master 2 en Géotechnique.
+          L'application prédit la capacité portante des fondations superficielles par
+          intelligence artificielle, en conformité avec l'Eurocode 7.
+        </p>
+        <p class="about-text" data-i18n="about.p2">
+          Le modèle est entraîné sur un large jeu de données géotechniques
+          et validé selon les normes internationales en vigueur.
+        </p>
+
+        <!-- Placeholder for student names -->
+        <div style="margin-top:1.5rem;padding:1rem;background:var(--surface);border:1px dashed var(--border);border-radius:var(--radius)">
+          <div style="font-size:0.7rem;color:var(--text3);font-family:var(--font-mono);margin-bottom:0.5rem">👤 ÉTUDIANTS DÉVELOPPEURS</div>
+          <div id="student-names" style="color:var(--text2);font-size:0.9rem">
+            <em style="color:var(--text3)" data-i18n="about.names_placeholder">Vos noms ici — à compléter</em>
+          </div>
+        </div>
+      </div>
+
+      <div class="about-tech-stack">
+        <div class="tech-card">
+          <span class="tech-icon">🐍</span>
+          <div class="tech-name">Python · FastAPI</div>
+          <div class="tech-desc">Backend API · Moteur de prédiction</div>
+        </div>
+        <div class="tech-card">
+          <span class="tech-icon">🤖</span>
+          <div class="tech-name">Machine Learning</div>
+          <div class="tech-desc">Pipeline de prédiction multi-étapes</div>
+        </div>
+        <div class="tech-card">
+          <span class="tech-icon">🌐</span>
+          <div class="tech-name">HTML · CSS · JS</div>
+          <div class="tech-desc">Interface web responsive trilingue</div>
+        </div>
+        <div class="tech-card">
+          <span class="tech-icon">☁️</span>
+          <div class="tech-name">Render · Vercel</div>
+          <div class="tech-desc">Hébergement cloud gratuit</div>
+        </div>
+        <div class="tech-card">
+          <span class="tech-icon">📐</span>
+          <div class="tech-name">Eurocode 7</div>
+          <div class="tech-desc">Norme européenne fondations</div>
+        </div>
+        <div class="tech-card">
+          <span class="tech-icon">📚</span>
+          <div class="tech-name">DTR Algérien</div>
+          <div class="tech-desc">Chatbot conseil réglementaire</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ FOOTER ═══════════════ -->
+<footer>
+  <div class="footer-logo">GEOPREDICT</div>
+  <p class="footer-text">
+    Université Badji Mokhtar Annaba · Master 2 Géotechnique<br>
+    Faculté de Technologie · Département Génie Civil · Eurocode 7
+  </p>
+  <div class="footer-links">
+    <a href="#home" class="footer-link" data-i18n="nav.home">Accueil</a>
+    <a href="#predict-section" class="footer-link" data-i18n="nav.predict">Prédiction</a>
+    <a href="#methodology-section" class="footer-link" data-i18n="nav.method">Méthodologie</a>
+    <a href="#about-section" class="footer-link" data-i18n="nav.about">À Propos</a>
+  </div>
+  <p style="margin-top:1rem;font-size:0.7rem;color:var(--text3)">
+    © 2025 GeoPredict · Tous droits réservés
+  </p>
+</footer>
+
+<!-- ═══════════════ CHATBOT ═══════════════ -->
+<button class="chatbot-fab" onclick="toggleChat()">
+  🤖
+  <span class="chatbot-badge">DTR</span>
+</button>
+
+<div class="chatbot-panel" id="chatbot-panel">
+  <div class="chat-header">
+    <div class="chat-avatar">🏗️</div>
+    <div>
+      <div class="chat-title">GeoBot DTR</div>
+      <div class="chat-subtitle">● DTR Algérien · Conseil réglementaire</div>
+    </div>
+    <button class="chat-close" onclick="toggleChat()">✕</button>
+  </div>
+
+  <div class="chat-lang-row">
+    <button class="chat-lang-btn active" onclick="setChatLang('fr',this)">FR</button>
+    <button class="chat-lang-btn" onclick="setChatLang('en',this)">EN</button>
+    <button class="chat-lang-btn" onclick="setChatLang('ar',this)">ع</button>
+  </div>
+
+  <div class="chat-messages" id="chat-messages">
+    <div class="chat-msg bot">
+      🏗️ Bonjour ! Je suis <strong>GeoBot DTR</strong>, votre assistant réglementaire algérien.<br><br>
+      Je réponds <em>uniquement</em> selon le <strong>DTR BC 2.331</strong> et les normes algériennes, avec les références exactes de pages et chapitres.
+      <span class="chat-ref">📚 Base : DTR BC 2.331 — Fondations superficielles</span>
+    </div>
+  </div>
+
+  <div class="chat-quick" id="chat-quick">
+    <button class="chat-quick-btn" onclick="sendQuick(this)">Facteur de sécurité DTR ?</button>
+    <button class="chat-quick-btn" onclick="sendQuick(this)">Profondeur minimale ?</button>
+    <button class="chat-quick-btn" onclick="sendQuick(this)">Effet de la nappe ?</button>
+    <button class="chat-quick-btn" onclick="sendQuick(this)">Contrainte admissible ?</button>
+  </div>
+
+  <div class="chat-input-row">
+    <input type="text" class="chat-input" id="chat-input" placeholder="Posez votre question DTR..." onkeydown="if(event.key==='Enter')sendChat()"/>
+    <button class="chat-send" onclick="sendChat()">➤</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════ -->
+<script>
+// ─────────────────────────────────────
+// CONFIG — Change this URL after deployment
+// ─────────────────────────────────────
+const API_URL = "https://YOUR-APP.onrender.com"; // ← À remplacer après déploiement Render
+
+// ─────────────────────────────────────
+// I18N — Translations
+// ─────────────────────────────────────
+const i18n = {
+  fr: {
+    "nav.home":"Accueil","nav.predict":"Prédiction","nav.charts":"Courbes","nav.method":"Méthodologie","nav.about":"À Propos",
+    "hero.badge":"Conforme Eurocode 7 · Intelligence Artificielle",
+    "hero.subtitle":"Prédiction de la capacité portante des fondations superficielles<br>par Intelligence Artificielle · Random Forest ML",
+    "hero.samples":"Échantillons","hero.stages":"Modèles RF",
+    "hero.cta1":"⚡ Calculer Maintenant","hero.cta2":"Voir la Méthode","hero.scroll":"Défiler",
+    "form.tag":"Moteur de Prédiction","form.title":"CALCUL DE CAPACITÉ PORTANTE",
+    "form.desc":"Entrez les paramètres géotechniques pour obtenir la prédiction instantanée par Random Forest",
+    "form.header":"PARAMÈTRES GÉOTECHNIQUES","form.loading":"CALCUL EN COURS...","form.calc":"CALCULER",
+    "group.soil":"Paramètres du Sol","group.found":"Géométrie Fondation","group.water":"Nappe & Charge",
+    "param.c":"Cohésion","param.phi":"Angle de frottement","param.gamma":"Poids volumique","param.gammasat":"Poids saturé",
+    "param.type":"Type de fondation","param.B":"Largeur","param.L":"Longueur","param.R":"Rayon","param.Df":"Encastrement",
+    "param.nappe":"CAS NAPPE — DÉTECTÉ AUTOMATIQUEMENT","param.Zw":"Prof. nappe phréatique","param.qapp":"Charge appliquée",
+    "type.rect":"Rect.","type.square":"Carrée","type.circ":"Circ.",
+    "nappe.0":"Cas 0 — Sans influence","nappe.1":"Cas 1 — Nappe ≤ Df","nappe.2":"Cas 2 — Dans zone B",
+    "results.tag":"Résultats de Prédiction","results.title":"ANALYSE STRUCTURELLE",
+    "results.stage1":"Stage 1 — Facteurs de portance & forme","results.stage2":"Stage 2 — Capacité portante",
+    "drawing.title":"DESSIN SCHÉMATIQUE — FONDATION (AUTO-GÉNÉRÉ)",
+    "btn.pdf":"Télécharger Rapport PDF","btn.charts":"Voir les Courbes",
+    "charts.tag":"Analyses Graphiques","charts.title":"COURBES DE SENSIBILITÉ",
+    "charts.desc":"Analyse de la variation des résultats selon les paramètres clés",
+    "chart.mohr":"Enveloppe de Mohr-Coulomb","chart.fsphi":"FS vs φ (Angle de frottement)",
+    "chart.qudf":"qu vs Df (Profondeur)","chart.fsqapp":"FS vs q_app (Charge)","chart.radar":"Sensibilité des Paramètres",
+    "method.tag":"Pipeline ML","method.title":"MÉTHODOLOGIE","method.desc":"Architecture du pipeline de prédiction en 2 étapes",
+    "pipe.input":"Entrées","pipe.fe":"Ingénierie","pipe.results":"Résultats",
+    "about.tag":"Projet Académique","about.title":"À PROPOS",
+    "about.p1":"GeoPredict est développé dans le cadre d'un mémoire de Master 2 en Géotechnique. L'application prédit la capacité portante des fondations superficielles par intelligence artificielle, en conformité avec l'Eurocode 7.",
+    "about.p2":"Le modèle est entraîné sur un large jeu de données géotechniques et validé selon les normes internationales en vigueur.",
+    "about.names_placeholder":"Vos noms ici — à compléter",
+  },
+  en: {
+    "nav.home":"Home","nav.predict":"Prediction","nav.charts":"Charts","nav.method":"Methodology","nav.about":"About",
+    "hero.badge":"Eurocode 7 Compliant · AI Powered",
+    "hero.subtitle":"Bearing capacity prediction of shallow foundations<br>by Artificial Intelligence · Multi-stage ML Pipeline",
+    "hero.samples":"Samples","hero.stages":"AI Models",
+    "hero.cta1":"⚡ Calculate Now","hero.cta2":"View Method","hero.scroll":"Scroll",
+    "form.tag":"Prediction Engine","form.title":"BEARING CAPACITY CALCULATION",
+    "form.desc":"Enter geotechnical parameters for instant AI prediction",
+    "form.header":"GEOTECHNICAL PARAMETERS","form.loading":"CALCULATING...","form.calc":"CALCULATE",
+    "group.soil":"Soil Parameters","group.found":"Foundation Geometry","group.water":"Water Table & Load",
+    "param.c":"Cohesion","param.phi":"Friction angle","param.gamma":"Unit weight","param.gammasat":"Saturated weight",
+    "param.type":"Foundation type","param.B":"Width","param.L":"Length","param.R":"Radius","param.Df":"Embedment",
+    "param.nappe":"WATER TABLE — AUTO DETECTED","param.Zw":"Water table depth","param.qapp":"Applied load",
+    "type.rect":"Rect.","type.square":"Square","type.circ":"Circ.",
+    "nappe.0":"Case 0 — No influence","nappe.1":"Case 1 — Table ≤ Df","nappe.2":"Case 2 — In B zone",
+    "results.tag":"Prediction Results","results.title":"STRUCTURAL ANALYSIS",
+    "results.stage1":"Stage 1 — Bearing & shape factors","results.stage2":"Stage 2 — Bearing capacity",
+    "drawing.title":"SCHEMATIC DRAWING — FOUNDATION (AUTO-GENERATED)",
+    "btn.pdf":"Download PDF Report","btn.charts":"View Charts",
+    "charts.tag":"Graphical Analysis","charts.title":"SENSITIVITY CURVES",
+    "charts.desc":"Analysis of result variation by key parameters",
+    "chart.mohr":"Mohr-Coulomb Envelope","chart.fsphi":"FS vs φ (Friction angle)",
+    "chart.qudf":"qu vs Df (Depth)","chart.fsqapp":"FS vs q_app (Load)","chart.radar":"Parameter Sensitivity",
+    "method.tag":"ML Pipeline","method.title":"METHODOLOGY","method.desc":"Multi-stage AI prediction pipeline architecture",
+    "pipe.input":"Inputs","pipe.fe":"Pre-processing","pipe.m1":"Model 1","pipe.m2":"Model 2","pipe.results":"Results",
+    "about.tag":"Academic Project","about.title":"ABOUT",
+    "about.p1":"GeoPredict is developed as part of a Master 2 Geotechnics thesis. The app predicts shallow foundation bearing capacity using artificial intelligence, in compliance with Eurocode 7.",
+    "about.p2":"The model is trained on a large geotechnical dataset and validated according to applicable international standards.",
+    "about.names_placeholder":"Your names here — to be filled",
+  },
+  ar: {
+    "nav.home":"الرئيسية","nav.predict":"التنبؤ","nav.charts":"المنحنيات","nav.method":"المنهجية","nav.about":"حول",
+    "hero.badge":"متوافق مع Eurocode 7 · ذكاء اصطناعي",
+    "hero.subtitle":"التنبؤ بالقدرة الحاملة للأساسات السطحية<br>بالذكاء الاصطناعي · نموذج متعدد المراحل",
+    "hero.samples":"عينة","hero.stages":"نماذج ذكاء",
+    "hero.cta1":"⚡ احسب الآن","hero.cta2":"عرض المنهجية","hero.scroll":"تمرير",
+    "form.tag":"محرك التنبؤ","form.title":"حساب القدرة الحاملة",
+    "form.desc":"أدخل المعاملات الجيوتقنية للحصول على التنبؤ الفوري",
+    "form.header":"المعاملات الجيوتقنية","form.loading":"جارٍ الحساب...","form.calc":"احسب",
+    "group.soil":"معاملات التربة","group.found":"هندسة الأساس","group.water":"المياه الجوفية والحمل",
+    "param.c":"التماسك","param.phi":"زاوية الاحتكاك","param.gamma":"الوزن الحجمي","param.gammasat":"الوزن المشبع",
+    "param.type":"نوع الأساس","param.B":"العرض","param.L":"الطول","param.R":"نصف القطر","param.Df":"عمق التأسيس",
+    "param.nappe":"مستوى المياه الجوفية — كشف تلقائي","param.Zw":"عمق المياه الجوفية","param.qapp":"الحمل المطبق",
+    "type.rect":"مستطيل","type.square":"مربع","type.circ":"دائري",
+    "nappe.0":"الحالة 0 — بدون تأثير","nappe.1":"الحالة 1 — المياه ≤ Df","nappe.2":"الحالة 2 — في المنطقة B",
+    "results.tag":"نتائج التنبؤ","results.title":"التحليل الإنشائي",
+    "results.stage1":"المرحلة 1 — معاملات الحمل والشكل","results.stage2":"المرحلة 2 — القدرة الحاملة",
+    "drawing.title":"رسم تخطيطي — الأساس (توليد تلقائي)",
+    "btn.pdf":"تحميل تقرير PDF","btn.charts":"عرض المنحنيات",
+    "charts.tag":"التحليل البياني","charts.title":"منحنيات الحساسية",
+    "charts.desc":"تحليل تغيرات النتائج وفق المعاملات الرئيسية",
+    "chart.mohr":"مغلف Mohr-Coulomb","chart.fsphi":"FS مقابل φ","chart.qudf":"qu مقابل Df","chart.fsqapp":"FS مقابل q_app","chart.radar":"حساسية المعاملات",
+    "method.tag":"خط الأنابيب","method.title":"المنهجية","method.desc":"معمارية خط أنابيب التنبؤ متعدد المراحل",
+    "pipe.input":"المدخلات","pipe.fe":"المعالجة","pipe.m1":"النموذج 1","pipe.m2":"النموذج 2","pipe.results":"النتائج",
+    "about.tag":"مشروع أكاديمي","about.title":"حول المشروع",
+    "about.p1":"GeoPredict مطور في إطار مذكرة ماستر 2 في الجيوتقنية. يتنبأ التطبيق بالقدرة الحاملة للأساسات السطحية بالذكاء الاصطناعي وفق Eurocode 7.",
+    "about.p2":"النموذج مدرب على قاعدة بيانات جيوتقنية واسعة وموثق وفق المعايير الدولية المعتمدة.",
+    "about.names_placeholder":"أسماؤكم هنا — يرجى التعبئة",
+  }
+};
+
+let currentLang = 'fr';
+let chatLang = 'fr';
+let lastResults = null;
+let charts = {};
+
+function setLang(lang) {
+  currentLang = lang;
+  document.documentElement.setAttribute('data-lang', lang);
+  document.documentElement.setAttribute('lang', lang);
+  document.querySelector('html').setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+
+  // Update all i18n elements
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (i18n[lang] && i18n[lang][key]) {
+      if (el.tagName === 'INPUT') el.placeholder = i18n[lang][key];
+      else el.innerHTML = i18n[lang][key];
+    }
+  });
+
+  // Update lang buttons
+  document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    if (btn.textContent.trim() === (lang === 'ar' ? 'ع' : lang.toUpperCase())) btn.classList.add('active');
+  });
+}
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  document.querySelector('.theme-toggle').textContent = next === 'dark' ? '🌙' : '☀️';
+  // Redraw charts with new theme
+  if (lastResults) setTimeout(() => drawAllCharts(lastResults), 100);
+}
+
+// ─────────────────────────────────────
+// Foundation type selector
+// ─────────────────────────────────────
+function selectFond(type, el) {
+  document.querySelectorAll('.fond-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('Type_fond').value = type;
+
+  const isCirc = type === 'Circulaire';
+  document.getElementById('field-B').style.display = isCirc ? 'none' : '';
+  document.getElementById('field-L').style.display = isCirc ? 'none' : '';
+  document.getElementById('field-R').style.display = isCirc ? '' : 'none';
+
+  if (isCirc) {
+    document.getElementById('B_m').value = 0;
+    document.getElementById('L_m').value = 0;
+  } else {
+    document.getElementById('R_m').value = 0;
+  }
+}
+
+// ─────────────────────────────────────
+// Water table selector
+// ─────────────────────────────────────
+// ─────────────────────────────────────
+// Auto nappe detection from Zw input
+// ─────────────────────────────────────
+function autoSelectNappe() {
+  const Zw = parseFloat(document.getElementById('Zw_m').value) || 0;
+  const Df = parseFloat(document.getElementById('Df_m').value) || 1.5;
+  const B  = parseFloat(document.getElementById('B_m').value) || parseFloat(document.getElementById('R_m').value)*2 || 1.5;
+
+  let cas = 0;
+  if (Zw <= Df) {
+    cas = 1; // nappe at or above foundation
+  } else if (Zw < Df + B) {
+    cas = 2; // nappe in influence zone B
+  } else {
+    cas = 0; // no influence
+  }
+
+  document.getElementById('cas_nappe').value = cas;
+
+  // Update visual cards
+  [0,1,2].forEach(i => {
+    const card = document.getElementById(`nappe-card-${i}`);
+    const check = document.getElementById(`nappe-check-${i}`);
+    if (card) {
+      card.classList.toggle('selected', i === cas);
+      if(check) check.style.display = i === cas ? 'block' : 'none';
+    }
+  });
+
+  // Update descriptions
+  const desc0 = document.getElementById('nappe-desc-0');
+  const desc1 = document.getElementById('nappe-desc-1');
+  const desc2 = document.getElementById('nappe-desc-2');
+  if(desc0) desc0.textContent = `Zw=${Zw}m ≥ Df+B=${(Df+B).toFixed(2)}m`;
+  if(desc1) desc1.textContent = `Zw=${Zw}m ≤ Df=${Df}m`;
+  if(desc2) desc2.textContent = `${Df}m < Zw=${Zw}m < ${(Df+B).toFixed(2)}m`;
+}
+
+// Also trigger on Df or B change
+document.addEventListener('DOMContentLoaded', () => {
+  ['Df_m','B_m','R_m'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.addEventListener('input', autoSelectNappe);
+  });
+  autoSelectNappe(); // init
+  initHeroCanvas();
+});
+
+// ─────────────────────────────────────
+// Hero animated geo canvas
+// ─────────────────────────────────────
+let heroFondType = 'rect';
+let heroAnimFrame = null;
+let heroPhase = 0;
+
+function setHeroFond(type, btn) {
+  heroFondType = type;
+  document.querySelectorAll('.hero-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function initHeroCanvas() {
+  const canvas = document.getElementById('hero-geo-canvas');
+  if (!canvas) return;
+  const wrap = canvas.parentElement;
+  canvas.width  = wrap.offsetWidth  || 520;
+  canvas.height = wrap.offsetHeight || 700;
+  if (heroAnimFrame) cancelAnimationFrame(heroAnimFrame);
+  animateHero();
+}
+
+function animateHero() {
+  heroPhase += 0.018;
+  drawHeroScene();
+  heroAnimFrame = requestAnimationFrame(animateHero);
+}
+
+function drawHeroScene() {
+  const canvas = document.getElementById('hero-geo-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+
+  ctx.clearRect(0,0,W,H);
+
+  // ── Background ──
+  const bgGrad = ctx.createLinearGradient(0,0,0,H);
+  bgGrad.addColorStop(0, isDark ? '#060d18' : '#e8ecf0');
+  bgGrad.addColorStop(1, isDark ? '#0b1929' : '#d0d8e2');
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(0,0,W,H);
+
+  // ── Soil layers (rich, realistic) ──
+  const layers = [
+    { h:0.08, color: isDark ? ['#3d2b1f','#2a1e15'] : ['#c4a882','#b09070'], label:'REMBLAI', hatch: true },
+    { h:0.15, color: isDark ? ['#5c3a28','#3d2520'] : ['#a0785a','#8a6248'], label:'ARGILE', dots: true },
+    { h:0.18, color: isDark ? ['#4a4030','#322b22'] : ['#b8a88a','#a09070'], label:'LIMON', stripes: true },
+    { h:0.20, color: isDark ? ['#6a5e40','#4a4030'] : ['#d4b870','#b89850'], label:'SABLE', dots2: true },
+    { h:0.16, color: isDark ? ['#284050','#1c2e3c'] : ['#7090a8','#5878908a'], label:'SABLE SATURÉ', water: true },
+    { h:0.23, color: isDark ? ['#302820','#201810'] : ['#7a6048','#5a4030'], label:'GRAVIER', gravel: true },
+  ];
+
+  let y = 0;
+  const layerRects = [];
+  layers.forEach((l, i) => {
+    const lh = H * l.h;
+    const grad = ctx.createLinearGradient(0,y,W,y+lh);
+    grad.addColorStop(0, l.color[0]);
+    grad.addColorStop(1, l.color[1]);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, y, W, lh);
+
+    // Texture
+    if (l.hatch) {
+      ctx.strokeStyle = isDark ? 'rgba(255,200,150,0.1)' : 'rgba(100,70,40,0.15)';
+      ctx.lineWidth = 0.5;
+      for (let x=0; x<W; x+=8) { ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+6, y+lh); ctx.stroke(); }
+    }
+    if (l.dots || l.dots2) {
+      ctx.fillStyle = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)';
+      const spacing = l.dots ? 10 : 6;
+      for (let dx=spacing/2; dx<W; dx+=spacing) for (let dy=y+spacing/2; dy<y+lh; dy+=spacing) {
+        ctx.beginPath(); ctx.arc(dx, dy, l.dots ? 1.5 : 1, 0, Math.PI*2); ctx.fill();
+      }
+    }
+    if (l.gravel) {
+      const seed = 42;
+      ctx.fillStyle = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)';
+      for (let g=0; g<40; g++) {
+        const gx = ((g * 137 + seed) % W);
+        const gy = y + ((g * 97) % lh);
+        const gr = 2 + (g % 4);
+        ctx.beginPath(); ctx.ellipse(gx, gy, gr, gr*0.7, g*0.5, 0, Math.PI*2); ctx.fill();
+      }
+    }
+
+    // Layer border
+    ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
+
+    // Label
+    ctx.fillStyle = isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.25)';
+    ctx.font = `bold 10px 'JetBrains Mono', monospace`;
+    ctx.textAlign = 'right';
+    ctx.fillText(l.label, W-10, y + lh/2 + 4);
+
+    layerRects.push({ y, h: lh });
+    y += lh;
+  });
+
+  // ── Animated water table ──
+  const waterY = H * 0.52 + Math.sin(heroPhase * 0.5) * 3;
+  const waterGrad = ctx.createLinearGradient(0, waterY-2, 0, waterY+4);
+  waterGrad.addColorStop(0, 'rgba(41,182,246,0.9)');
+  waterGrad.addColorStop(1, 'rgba(41,182,246,0.2)');
+  ctx.fillStyle = waterGrad;
+  ctx.fillRect(0, waterY, W, 3);
+  // Shimmer
+  for (let wx=0; wx<W; wx+=30) {
+    const sx = wx + Math.sin(heroPhase + wx*0.05)*8;
+    ctx.strokeStyle = 'rgba(150,220,255,0.5)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(sx, waterY+1); ctx.lineTo(sx+15, waterY+1); ctx.stroke();
+  }
+  // Water label
+  ctx.fillStyle = 'rgba(41,182,246,0.8)';
+  ctx.font = `bold 10px 'JetBrains Mono', monospace`;
+  ctx.textAlign = 'left';
+  ctx.fillText('≈ NAPPE PHRÉATIQUE', 10, waterY - 5);
+
+  // ── Ground surface ──
+  const groundY = H * 0.18;
+  ctx.strokeStyle = isDark ? 'rgba(200,180,150,0.6)' : 'rgba(80,60,40,0.6)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(0, groundY); ctx.lineTo(W, groundY); ctx.stroke();
+
+  // Hatching above ground (sky/fill)
+  ctx.strokeStyle = isDark ? 'rgba(255,220,180,0.15)' : 'rgba(80,60,40,0.12)';
+  ctx.lineWidth = 0.7;
+  for (let hx=0; hx<W; hx+=10) {
+    ctx.beginPath(); ctx.moveTo(hx, groundY); ctx.lineTo(hx-8, groundY+8); ctx.stroke();
+  }
+
+  // ── Foundation ──
+  const fondCenterX = W * 0.42;
+  const fondDf = H * 0.12; // Df visual
+  const fondY = groundY + fondDf;
+  const fondThick = 14;
+  let fondW = 0, fondH = fondThick;
+  const settle = Math.sin(heroPhase * 0.7) * 1.5; // subtle settlement animation
+
+  if (heroFondType === 'rect') {
+    fondW = 140;
+    const fg = ctx.createLinearGradient(fondCenterX-fondW/2, fondY+settle, fondCenterX+fondW/2, fondY+settle+fondThick);
+    fg.addColorStop(0, '#cc6a00'); fg.addColorStop(0.5, '#ff8c00'); fg.addColorStop(1, '#993300');
+    ctx.fillStyle = fg;
+    ctx.fillRect(fondCenterX-fondW/2, fondY+settle, fondW, fondThick);
+    ctx.strokeStyle = '#ffaa33'; ctx.lineWidth = 1.5;
+    ctx.strokeRect(fondCenterX-fondW/2, fondY+settle, fondW, fondThick);
+    // B label
+    ctx.fillStyle = '#ffaa33'; ctx.font = `bold 11px 'JetBrains Mono', monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText('B', fondCenterX, fondY+settle-5);
+    // B arrows
+    ctx.strokeStyle = '#ffaa33'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(fondCenterX-fondW/2, fondY+settle-3); ctx.lineTo(fondCenterX+fondW/2, fondY+settle-3); ctx.stroke();
+
+  } else if (heroFondType === 'square') {
+    fondW = 100;
+    const fg = ctx.createLinearGradient(fondCenterX-fondW/2, fondY+settle, fondCenterX+fondW/2, fondY+settle+fondThick);
+    fg.addColorStop(0, '#cc6a00'); fg.addColorStop(0.5, '#ff8c00'); fg.addColorStop(1, '#993300');
+    ctx.fillStyle = fg;
+    ctx.fillRect(fondCenterX-fondW/2, fondY+settle, fondW, fondThick);
+    ctx.strokeStyle = '#ffaa33'; ctx.lineWidth = 1.5;
+    ctx.strokeRect(fondCenterX-fondW/2, fondY+settle, fondW, fondThick);
+    ctx.fillStyle = '#ffaa33'; ctx.font = `bold 11px 'JetBrains Mono', monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText('B = L', fondCenterX, fondY+settle-5);
+
+  } else {
+    // Circular
+    const R = 55;
+    fondW = R*2;
+    const ry = fondThick * 0.6;
+    const fg = ctx.createRadialGradient(fondCenterX, fondY+settle+ry, 0, fondCenterX, fondY+settle+ry, R);
+    fg.addColorStop(0, '#ff8c00'); fg.addColorStop(1, '#993300');
+    ctx.fillStyle = fg;
+    ctx.beginPath(); ctx.ellipse(fondCenterX, fondY+settle+ry, R, ry*1.5, 0, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#ffaa33'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.ellipse(fondCenterX, fondY+settle+ry, R, ry*1.5, 0, 0, Math.PI*2); ctx.stroke();
+    ctx.fillStyle = '#ffaa33'; ctx.font = `bold 11px 'JetBrains Mono', monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText('⊙ R', fondCenterX, fondY+settle-5);
+  }
+
+  // ── Pressure bulb (animated) ──
+  const bulbAnim = 0.85 + Math.sin(heroPhase) * 0.08;
+  ctx.strokeStyle = `rgba(255,140,0,${0.25 * bulbAnim})`;
+  ctx.lineWidth = 1; ctx.setLineDash([4,4]);
+  const bx = fondCenterX, by = fondY + fondThick + settle;
+  const bw = fondW * 1.6 * bulbAnim, bh = fondW * 1.1 * bulbAnim;
+  ctx.beginPath(); ctx.ellipse(bx, by + bh/2, bw/2, bh/2, 0, 0, Math.PI*2); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // ── Df dimension line ──
+  const dfX = fondCenterX - fondW/2 - 22;
+  ctx.strokeStyle = isDark ? 'rgba(200,200,200,0.4)' : 'rgba(50,50,50,0.4)';
+  ctx.lineWidth = 1; ctx.setLineDash([3,3]);
+  ctx.beginPath(); ctx.moveTo(dfX, groundY); ctx.lineTo(dfX, fondY+settle); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = isDark ? 'rgba(200,200,200,0.7)' : 'rgba(50,50,50,0.7)';
+  ctx.font = `bold 10px 'JetBrains Mono', monospace`;
+  ctx.textAlign = 'center';
+  ctx.save(); ctx.translate(dfX-10, (groundY+fondY+settle)/2);
+  ctx.rotate(-Math.PI/2); ctx.fillText('Df', 0, 0); ctx.restore();
+
+  // ── Load arrows (animated) ──
+  const arrowAnim = 0.8 + Math.sin(heroPhase * 1.2) * 0.2;
+  ctx.fillStyle = `rgba(41,182,246,${arrowAnim})`;
+  ctx.strokeStyle = `rgba(41,182,246,${arrowAnim})`;
+  ctx.lineWidth = 1.5;
+  const numArr = heroFondType === 'circ' ? 3 : 4;
+  const arrSpacing = fondW / (numArr+1);
+  const arrStart = fondCenterX - fondW/2;
+  for (let a=1; a<=numArr; a++) {
+    const ax = arrStart + arrSpacing*a;
+    const topY = groundY - 28;
+    ctx.beginPath(); ctx.moveTo(ax, topY); ctx.lineTo(ax, fondY+settle); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(ax, fondY+settle); ctx.lineTo(ax-5, fondY+settle-10); ctx.lineTo(ax+5, fondY+settle-10); ctx.closePath(); ctx.fill();
+  }
+  // q_app label
+  ctx.fillStyle = `rgba(41,182,246,${arrowAnim})`;
+  ctx.font = `bold 10px 'JetBrains Mono', monospace`;
+  ctx.textAlign = 'center';
+  ctx.fillText('q_app', fondCenterX, groundY - 36);
+
+  // ── Geo data overlay (top-left) ──
+  const overlayData = ['GÉOTECHNIQUE', 'c · φ · γ · Df', 'EUROCODE 7', '──────────────', 'R² = 0.9659'];
+  ctx.fillStyle = isDark ? 'rgba(6,13,24,0.6)' : 'rgba(240,242,245,0.7)';
+  ctx.beginPath(); ctx.roundRect(10, 10, 160, overlayData.length*18+12, 6); ctx.fill();
+  overlayData.forEach((line, i) => {
+    ctx.fillStyle = i===0 ? '#ff8c00' : i===4 ? '#00e676' : isDark ? 'rgba(154,179,204,0.8)' : 'rgba(58,80,104,0.8)';
+    ctx.font = `${i===0?'bold ':''} 9px 'JetBrains Mono', monospace`;
+    ctx.textAlign = 'left';
+    ctx.fillText(line, 18, 24 + i*18);
+  });
+}
+
+function selectNappe(val, el) {
+  document.querySelectorAll('.nappe-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('cas_nappe').value = val;
+}
+
+// ─────────────────────────────────────
+// Reset form
+// ─────────────────────────────────────
+function resetForm() {
+  document.getElementById('c_kPa').value = '';
+  document.getElementById('phi_deg').value = '';
+  document.getElementById('gamma_kNm3').value = '';
+  document.getElementById('gamma_sat').value = '';
+  document.getElementById('B_m').value = '';
+  document.getElementById('L_m').value = '';
+  document.getElementById('R_m').value = '';
+  document.getElementById('Df_m').value = '';
+  document.getElementById('Zw_m').value = '';
+  document.getElementById('q_app_kPa').value = '';
+  document.getElementById('results-section').classList.remove('visible');
+  document.getElementById('charts-section').classList.remove('visible');
+}
+
+// ─────────────────────────────────────
+// MAIN CALCULATE
+// ─────────────────────────────────────
+async function calculate() {
+  const payload = {
+    c_kPa:      parseFloat(document.getElementById('c_kPa').value),
+    phi_deg:    parseFloat(document.getElementById('phi_deg').value),
+    gamma_kNm3: parseFloat(document.getElementById('gamma_kNm3').value),
+    gamma_sat:  parseFloat(document.getElementById('gamma_sat').value),
+    B_m:        parseFloat(document.getElementById('B_m').value) || 0,
+    L_m:        parseFloat(document.getElementById('L_m').value) || 0,
+    R_m:        parseFloat(document.getElementById('R_m').value) || 0,
+    Df_m:       parseFloat(document.getElementById('Df_m').value),
+    Zw_m:       parseFloat(document.getElementById('Zw_m').value),
+    cas_nappe:  parseInt(document.getElementById('cas_nappe').value),
+    q_app_kPa:  parseFloat(document.getElementById('q_app_kPa').value),
+    Type_fond:  document.getElementById('Type_fond').value,
+  };
+
+  // Validation
+  const required = ['c_kPa','phi_deg','gamma_kNm3','gamma_sat','Df_m','Zw_m','q_app_kPa'];
+  for (const k of required) {
+    if (isNaN(payload[k])) {
+      alert('⚠️ Veuillez remplir tous les champs requis.');
+      return;
+    }
+  }
+
+  // Show loading
+  const overlay = document.getElementById('loading-overlay');
+  overlay.classList.add('active');
+
+  try {
+    const response = await fetch(`${API_URL}/predict`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.detail || 'Erreur API');
+    }
+
+    const data = await response.json();
+    lastResults = { ...data, inputs: payload };
+    displayResults(data, payload);
+
+  } catch (e) {
+    alert(`❌ Erreur : ${e.message}\n\nVérifiez que l'API est démarrée sur Render.com`);
+  } finally {
+    overlay.classList.remove('active');
+  }
+}
+
+// ─────────────────────────────────────
+// Display results
+// ─────────────────────────────────────
+function displayResults(data, inp) {
+  const s1 = data.stage1;
+  const s2 = data.stage2;
+  const v = data.verdict;
+
+  // Stage 1
+  const maxN = 50;
+  ['Nq','Nc','Ng'].forEach(k => {
+    document.getElementById(`r-${k}`).textContent = s1[k].toFixed(2);
+    document.getElementById(`bar-${k}`).style.width = Math.min(s1[k]/maxN*100,100)+'%';
+  });
+  ['sq','sc','sg'].forEach(k => {
+    document.getElementById(`r-${k}`).textContent = s1[k].toFixed(3);
+    document.getElementById(`bar-${k}`).style.width = Math.min((s1[k]-1)*100,100)+'%';
+  });
+
+  // Stage 2
+  document.getElementById('r-qu').textContent   = s2.qu_kPa.toFixed(1);
+  document.getElementById('r-qadm').textContent = s2.q_adm_kPa.toFixed(1);
+  document.getElementById('r-fs').textContent   = s2.FS.toFixed(3);
+
+  // Corrections
+  document.getElementById('r-rw1').textContent  = data.inputs.Rw1.toFixed(4);
+  document.getElementById('r-rw2').textContent  = data.inputs.Rw2.toFixed(4);
+  document.getElementById('r-geff').textContent = data.inputs.gamma_eff_kNm3.toFixed(2);
+
+  // Verdict
+  const colorMap = { green:'✅', blue:'🔵', yellow:'⚠️', red:'🔴' };
+  const banner = document.getElementById('verdict-banner');
+  banner.className = `verdict-banner ${v.color}`;
+  document.getElementById('verdict-icon').textContent = colorMap[v.color] || '📊';
+  document.getElementById('verdict-title').textContent = v.status;
+  document.getElementById('verdict-fs').textContent = s2.FS.toFixed(2);
+
+  const fsEl = document.getElementById('r-fs');
+  const colorVars = { green:'var(--green)', blue:'var(--blue)', yellow:'var(--yellow)', red:'var(--red)' };
+  fsEl.style.color = colorVars[v.color] || 'var(--text1)';
+
+  // Show sections
+  document.getElementById('results-section').classList.add('visible');
+  document.getElementById('charts-section').classList.add('visible');
+
+  // Draw
+  drawFoundation(inp, s2);
+  drawAllCharts({ ...data, inputs: inp });
+
+  // Scroll to results
+  setTimeout(() => document.getElementById('results-section').scrollIntoView({ behavior: 'smooth' }), 100);
+}
+
+// ─────────────────────────────────────
+// Foundation Drawing
+// ─────────────────────────────────────
+function drawFoundation(inp, s2) {
+  const canvas = document.getElementById('foundation-canvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+
+  ctx.clearRect(0,0,W,H);
+
+  // Colors
+  const bg = isDark ? '#0b1929' : '#f5f7fa';
+  const soilColor = isDark ? '#3d2b1a' : '#c4a882';
+  const soil2 = isDark ? '#2a3d2a' : '#9ab87a';
+  const foundColor = isDark ? '#ff8c00' : '#e07000';
+  const waterColor = isDark ? '#29b6f6' : '#0277bd';
+  const textColor = isDark ? '#9ab3cc' : '#3a5068';
+  const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+
+  // Background
+  ctx.fillStyle = bg;
+  ctx.fillRect(0,0,W,H);
+
+  // Grid
+  ctx.strokeStyle = gridColor;
+  ctx.lineWidth = 1;
+  for (let x=0;x<W;x+=30) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for (let y=0;y<H;y+=30) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+
+  const scale = 60; // px per meter
+  const originX = W / 2;
+  const groundY = 80;
+
+  // Ground surface
+  ctx.strokeStyle = textColor;
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(50, groundY); ctx.lineTo(W-50, groundY); ctx.stroke();
+
+  // Hatching above ground
+  ctx.strokeStyle = textColor; ctx.lineWidth = 0.5;
+  for (let x=50;x<W-50;x+=10) {
+    ctx.beginPath(); ctx.moveTo(x,groundY); ctx.lineTo(x-8,groundY+8); ctx.stroke();
+  }
+
+  // Soil layers
+  const soilH = H - groundY - 30;
+  ctx.fillStyle = soilColor;
+  ctx.fillRect(50, groundY, W-100, soilH*0.6);
+  ctx.fillStyle = soil2;
+  ctx.fillRect(50, groundY+soilH*0.6, W-100, soilH*0.4);
+
+  const isCirc = inp.Type_fond === 'Circulaire';
+  const Beff = isCirc ? inp.R_m * 2 : inp.B_m;
+  const DfPx = inp.Df_m * scale;
+  const BPx  = Math.max(Beff * scale, 40);
+
+  const foundY = groundY + DfPx;
+  const foundX = originX - BPx/2;
+  const foundThick = 16;
+
+  // Df arrow
+  ctx.strokeStyle = textColor; ctx.lineWidth = 1;
+  ctx.setLineDash([4,3]);
+  ctx.beginPath(); ctx.moveTo(foundX - 30, groundY); ctx.lineTo(foundX - 30, foundY); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = textColor; ctx.font = `bold 13px 'JetBrains Mono', monospace`;
+  ctx.textAlign = 'center';
+  ctx.fillText(`Df=${inp.Df_m}m`, foundX - 50, (groundY+foundY)/2);
+
+  // Foundation shape
+  if (!isCirc) {
+    // Rectangular/Square
+    const grad = ctx.createLinearGradient(foundX, foundY, foundX, foundY+foundThick);
+    grad.addColorStop(0, foundColor);
+    grad.addColorStop(1, '#5a3000');
+    ctx.fillStyle = grad;
+    ctx.fillRect(foundX, foundY, BPx, foundThick);
+    ctx.strokeStyle = foundColor; ctx.lineWidth = 2;
+    ctx.strokeRect(foundX, foundY, BPx, foundThick);
+
+    // B dimension
+    ctx.fillStyle = foundColor; ctx.font = `bold 12px 'JetBrains Mono', monospace`;
+    ctx.fillText(`B=${inp.B_m}m`, originX, foundY - 8);
+    if (inp.Type_fond === 'Rectangulaire') {
+      ctx.fillStyle = textColor; ctx.font = `11px 'JetBrains Mono', monospace`;
+      ctx.fillText(`L=${inp.L_m}m`, originX, foundY - 22);
+    }
+  } else {
+    // Circular
+    const cx = originX, cy = foundY + foundThick/2;
+    const rx = BPx/2, ry = foundThick/2;
+    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, rx);
+    grad.addColorStop(0, foundColor);
+    grad.addColorStop(1, '#5a3000');
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry*2, 0, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = foundColor; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry*2, 0, 0, Math.PI*2); ctx.stroke();
+    ctx.fillStyle = foundColor; ctx.font = `bold 12px 'JetBrains Mono', monospace`;
+    ctx.fillText(`R=${inp.R_m}m`, originX, foundY - 8);
+  }
+
+  // Pressure bulb
+  ctx.strokeStyle = `rgba(255,140,0,0.3)`;
+  ctx.lineWidth = 1; ctx.setLineDash([3,3]);
+  const bulbW = BPx * 1.5, bulbH = BPx * 1.2;
+  ctx.beginPath();
+  ctx.ellipse(originX, foundY + foundThick + bulbH/2, bulbW/2, bulbH/2, 0, 0, Math.PI*2);
+  ctx.stroke(); ctx.setLineDash([]);
+
+  // Water table
+  if (inp.cas_nappe > 0) {
+    const ZwPx = inp.Zw_m * scale;
+    const waterY = groundY + ZwPx;
+    if (waterY < H - 20) {
+      ctx.strokeStyle = waterColor; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(50, waterY); ctx.lineTo(W-50, waterY); ctx.stroke();
+      ctx.fillStyle = `rgba(41,182,246,0.1)`;
+      ctx.fillRect(50, waterY, W-100, H-waterY-20);
+      ctx.fillStyle = waterColor; ctx.font = `bold 11px 'JetBrains Mono', monospace`;
+      ctx.textAlign = 'left';
+      ctx.fillText(`≈≈ Nappe (Zw=${inp.Zw_m}m)`, 60, waterY-5);
+    }
+  }
+
+  // q_app arrows
+  ctx.fillStyle = '#29b6f6'; ctx.strokeStyle = '#29b6f6'; ctx.lineWidth = 2;
+  const arrowCount = 5;
+  const arrowSpacing = BPx / (arrowCount + 1);
+  for (let i=1; i<=arrowCount; i++) {
+    const ax = foundX + arrowSpacing * i;
+    const ay = groundY - 30;
+    ctx.beginPath();
+    ctx.moveTo(ax, ay); ctx.lineTo(ax, foundY);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(ax, foundY); ctx.lineTo(ax-5, foundY-10); ctx.lineTo(ax+5, foundY-10); ctx.closePath();
+    ctx.fill();
+  }
+  ctx.fillStyle = '#29b6f6'; ctx.font = `bold 12px 'JetBrains Mono', monospace`;
+  ctx.textAlign = 'center';
+  ctx.fillText(`q_app = ${inp.q_app_kPa} kPa`, originX, groundY - 40);
+
+  // Results annotation
+  ctx.fillStyle = s2.FS >= 3.2 ? '#00e676' : s2.FS >= 2.5 ? '#29b6f6' : s2.FS >= 2.0 ? '#ffeb3b' : '#ff5252';
+  ctx.font = `bold 14px 'JetBrains Mono', monospace`;
+  ctx.textAlign = 'right';
+  ctx.fillText(`qu = ${s2.qu_kPa.toFixed(0)} kPa`, W-60, groundY + 40);
+  ctx.fillText(`q_adm = ${s2.q_adm_kPa.toFixed(0)} kPa`, W-60, groundY + 60);
+  ctx.fillText(`FS = ${s2.FS.toFixed(2)}`, W-60, groundY + 80);
+
+  // Title
+  ctx.fillStyle = textColor; ctx.font = `12px 'JetBrains Mono', monospace`;
+  ctx.textAlign = 'left';
+  ctx.fillText(`GeoPredict — Fondation ${inp.Type_fond} — Eurocode 7`, 60, 25);
+}
+
+// ─────────────────────────────────────
+// Draw all 5 charts
+// ─────────────────────────────────────
+function getChartColors() {
+  const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+  return {
+    accent: isDark ? '#ff8c00' : '#e07000',
+    green: isDark ? '#00e676' : '#1b8a4a',
+    blue: isDark ? '#29b6f6' : '#0277bd',
+    red: isDark ? '#ff5252' : '#c62828',
+    text: isDark ? '#9ab3cc' : '#3a5068',
+    grid: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+    bg: isDark ? '#1a2e42' : '#ffffff',
+  };
+}
+
+function destroyChart(id) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+}
+
+function drawAllCharts(res) {
+  const inp = res.inputs;
+  const c = getChartColors();
+  const s2 = res.stage2;
+
+  Chart.defaults.color = c.text;
+  Chart.defaults.borderColor = c.grid;
+
+  // 1. Mohr-Coulomb
+  destroyChart('mohr');
+  const phi_rad = inp.phi_deg * Math.PI / 180;
+  const sigma_max = 600;
+  const sigma_pts = [0, 100, 200, 300, 400, 500, sigma_max];
+  const tau_pts = sigma_pts.map(s => inp.c_kPa + s * Math.tan(phi_rad));
+  charts['mohr'] = new Chart(document.getElementById('chart-mohr'), {
+    type: 'line',
+    data: {
+      labels: sigma_pts,
+      datasets: [{
+        label: `τ = c' + σ·tan(φ') — c=${inp.c_kPa}kPa, φ=${inp.phi_deg}°`,
+        data: tau_pts,
+        borderColor: c.accent,
+        backgroundColor: c.accent+'22',
+        fill: true,
+        tension: 0,
+        pointRadius: 3,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { labels: { color: c.text } } },
+      scales: {
+        x: { title: { display: true, text: 'σ normale (kPa)', color: c.text }, grid: { color: c.grid }, ticks: { color: c.text } },
+        y: { title: { display: true, text: 'τ cisaillement (kPa)', color: c.text }, grid: { color: c.grid }, ticks: { color: c.text } }
+      }
+    }
+  });
+
+  // 2. FS vs phi — analytical approximation
+  destroyChart('fsphi');
+  const phi_range = Array.from({length:20}, (_,i) => 5 + i*2);
+  // Use ratio of current: FS scales roughly with tan(phi)
+  const fs_phi = phi_range.map(ph => {
+    const ratio = Math.tan(ph*Math.PI/180) / Math.tan(inp.phi_deg*Math.PI/180);
+    return Math.min(s2.FS * ratio, 10);
+  });
+  charts['fsphi'] = new Chart(document.getElementById('chart-fsphi'), {
+    type: 'line',
+    data: {
+      labels: phi_range.map(p => p+'°'),
+      datasets: [{
+        label: `FS vs φ (estimé, q_app=${inp.q_app_kPa}kPa)`,
+        data: fs_phi,
+        borderColor: c.blue,
+        backgroundColor: c.blue+'22',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 3,
+      },{
+        label: 'FS = 3 (seuil)',
+        data: phi_range.map(() => 3),
+        borderColor: c.green, borderDash: [6,3],
+        pointRadius: 0, fill: false,
+      },{
+        label: 'FS actuel',
+        data: phi_range.map((p,i) => p === inp.phi_deg || (i>0 && phi_range[i-1]<inp.phi_deg && p>=inp.phi_deg) ? s2.FS : null),
+        borderColor: c.red, pointBackgroundColor: c.red,
+        pointRadius: 8, showLine: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { labels: { color: c.text } } },
+      scales: {
+        x: { title: { display: true, text: 'φ (°)', color: c.text }, grid: { color: c.grid }, ticks: { color: c.text } },
+        y: { title: { display: true, text: 'FS', color: c.text }, grid: { color: c.grid }, ticks: { color: c.text }, min: 0 }
+      }
+    }
+  });
+
+  // 3. qu vs Df
+  destroyChart('qudf');
+  const df_range = Array.from({length:10}, (_,i) => 0.5 + i*0.3);
+  const qu_df = df_range.map(d => {
+    const ratio = d / inp.Df_m;
+    return s2.qu_kPa * (0.6 + 0.4*ratio);
+  });
+  charts['qudf'] = new Chart(document.getElementById('chart-qudf'), {
+    type: 'line',
+    data: {
+      labels: df_range.map(d => d.toFixed(1)+'m'),
+      datasets: [{
+        label: `qu vs Df (estimé, B=${inp.B_m||inp.R_m*2}m)`,
+        data: qu_df,
+        borderColor: c.green,
+        backgroundColor: c.green+'22',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 3,
+      },{
+        label: 'Df actuel',
+        data: df_range.map(d => Math.abs(d - inp.Df_m) < 0.2 ? s2.qu_kPa : null),
+        borderColor: c.accent, pointBackgroundColor: c.accent,
+        pointRadius: 8, showLine: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { labels: { color: c.text } } },
+      scales: {
+        x: { title: { display: true, text: 'Df (m)', color: c.text }, grid: { color: c.grid }, ticks: { color: c.text } },
+        y: { title: { display: true, text: 'qu (kPa)', color: c.text }, grid: { color: c.grid }, ticks: { color: c.text }, min: 0 }
+      }
+    }
+  });
+
+  // 4. FS vs q_app
+  destroyChart('fsqapp');
+  const q_range = Array.from({length:20}, (_,i) => 20 + i*25);
+  const fs_qapp = q_range.map(q => s2.FS * inp.q_app_kPa / q);
+  charts['fsqapp'] = new Chart(document.getElementById('chart-fsqapp'), {
+    type: 'line',
+    data: {
+      labels: q_range.map(q => q+'kPa'),
+      datasets: [{
+        label: 'FS vs q_app',
+        data: fs_qapp,
+        borderColor: c.red,
+        backgroundColor: c.red+'22',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 3,
+      },{
+        label: 'FS = 3 (seuil EC7)',
+        data: q_range.map(() => 3),
+        borderColor: c.green, borderDash: [6,3],
+        pointRadius: 0, fill: false,
+      },{
+        label: 'Charge actuelle',
+        data: q_range.map(q => Math.abs(q - inp.q_app_kPa) < 15 ? s2.FS : null),
+        borderColor: c.accent, pointBackgroundColor: c.accent,
+        pointRadius: 8, showLine: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { labels: { color: c.text } } },
+      scales: {
+        x: { title: { display: true, text: 'q_app (kPa)', color: c.text }, grid: { color: c.grid }, ticks: { color: c.text }, ticks: { maxRotation: 45, color: c.text } },
+        y: { title: { display: true, text: 'FS', color: c.text }, grid: { color: c.grid }, ticks: { color: c.text }, min: 0, max: Math.max(...fs_qapp.filter(f=>isFinite(f)))+1 }
+      }
+    }
+  });
+
+  // 5. Radar — Feature importance Stage 1
+  destroyChart('radar');
+  charts['radar'] = new Chart(document.getElementById('chart-radar'), {
+    type: 'radar',
+    data: {
+      labels: ['φ (0.51)', 'L (0.12)', 'Type_rect (0.11)', 'B (0.05)', 'R (0.04)', 'c (0.02)', 'Zw (0.02)', 'γsat (0.01)', 'γ (0.01)', 'Df (0.01)'],
+      datasets: [{
+        label: 'Importance (RF Stage 1)',
+        data: [0.5117, 0.1205, 0.1121, 0.0506, 0.0374, 0.021, 0.0163, 0.0134, 0.0133, 0.0121],
+        borderColor: c.accent,
+        backgroundColor: c.accent+'33',
+        pointBackgroundColor: c.accent,
+        pointRadius: 5,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { labels: { color: c.text } } },
+      scales: {
+        r: {
+          grid: { color: c.grid },
+          angleLines: { color: c.grid },
+          pointLabels: { color: c.text, font: { size: 11 } },
+          ticks: { color: c.text, backdropColor: 'transparent' },
+          min: 0,
+        }
+      }
+    }
+  });
+}
+
+// ─────────────────────────────────────
+// PDF Report
+// ─────────────────────────────────────
+async function downloadPDF() {
+  if (!lastResults) { alert('Lancez d\'abord un calcul !'); return; }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const W = 210, M = 15;
+
+  // Header
+  doc.setFillColor(11, 25, 41);
+  doc.rect(0, 0, W, 40, 'F');
+  doc.setTextColor(255, 140, 0);
+  doc.setFontSize(22);
+  doc.setFont('helvetica', 'bold');
+  doc.text('GEOPREDICT', M, 18);
+  doc.setFontSize(10);
+  doc.setTextColor(154, 179, 204);
+  doc.text('Rapport de Capacite Portante — Eurocode 7', M, 26);
+  doc.setTextColor(0, 230, 118);
+  doc.text(`R2 max = 0.9659  |  Intelligence Artificielle  |  Eurocode 7`, M, 33);
+
+  // Date
+  doc.setFontSize(9);
+  doc.setTextColor(154, 179, 204);
+  doc.text(`Genere le : ${new Date().toLocaleString('fr-FR')}`, W-M, 33, { align: 'right' });
+
+  let y = 50;
+  const inp = lastResults.inputs;
+  const s1 = lastResults.stage1;
+  const s2 = lastResults.stage2;
+  const v = lastResults.verdict;
+
+  // Section helper
+  const section = (title) => {
+    doc.setFillColor(26, 46, 66);
+    doc.rect(M, y, W-M*2, 8, 'F');
+    doc.setTextColor(255, 140, 0);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text(title, M+3, y+5.5);
+    y += 12;
+    doc.setTextColor(40, 60, 80);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+  };
+
+  const row = (label, value, color) => {
+    if (y > 270) { doc.addPage(); y = 20; }
+    doc.setTextColor(80, 100, 120);
+    doc.text(label, M+3, y);
+    if (color) {
+      const rgb = color === 'green' ? [0,150,80] : color === 'red' ? [180,30,30] : color === 'blue' ? [20,120,180] : [200,120,0];
+      doc.setTextColor(...rgb);
+    } else {
+      doc.setTextColor(20, 40, 60);
+    }
+    doc.setFont('helvetica', 'bold');
+    doc.text(String(value), 120, y);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(80, 100, 120);
+    y += 6;
+  };
+
+  // Inputs
+  section('1. PARAMETRES D\'ENTREE');
+  row('Type de fondation', inp.Type_fond);
+  row('Cohesion c\'', `${inp.c_kPa} kPa`);
+  row('Angle de frottement phi\'', `${inp.phi_deg} deg`);
+  row('Poids volumique naturel gamma', `${inp.gamma_kNm3} kN/m3`);
+  row('Poids volumique sature gamma_sat', `${inp.gamma_sat} kN/m3`);
+  if (inp.Type_fond !== 'Circulaire') {
+    row('Largeur B', `${inp.B_m} m`);
+    row('Longueur L', `${inp.L_m} m`);
+  } else {
+    row('Rayon R', `${inp.R_m} m`);
+  }
+  row('Profondeur fondation Df', `${inp.Df_m} m`);
+  row('Prof. nappe Zw', `${inp.Zw_m} m`);
+  row('Cas nappe', inp.cas_nappe);
+  row('Charge appliquee q_app', `${inp.q_app_kPa} kPa`);
+  y += 3;
+
+  // Corrections
+  section('2. CORRECTIONS NAPPE PHREATIQUE');
+  row('Coefficient Rw1 (terme Nq)', lastResults.inputs.Rw1);
+  row('Coefficient Rw2 (terme Ng)', lastResults.inputs.Rw2);
+  row('Poids volumique effectif gamma_eff', `${lastResults.inputs.gamma_eff_kNm3} kN/m3`);
+  y += 3;
+
+  // Stage 1
+  section('3. STAGE 1 — FACTEURS DE PORTANCE ET DE FORME (R2~0.96)');
+  row('Facteur Nq', s1.Nq);
+  row('Facteur Nc', s1.Nc);
+  row('Facteur Ngamma', s1.Ng);
+  row('Facteur de forme sq', s1.sq);
+  row('Facteur de forme sc', s1.sc);
+  row('Facteur de forme sgamma', s1.sg);
+  y += 3;
+
+  // Stage 2
+  section('4. STAGE 2 — CAPACITE PORTANTE (R2=0.9659)');
+  row('Capacite portante ultime qu', `${s2.qu_kPa} kPa`, 'orange');
+  row('Capacite portante admissible q_adm', `${s2.q_adm_kPa} kPa`, 'green');
+  row('Facteur de securite FS', s2.FS, v.color);
+  y += 5;
+
+  // Verdict box
+  const vColors = { green:[0,200,100], blue:[41,182,246], yellow:[255,200,0], red:[255,82,82] };
+  const vc = vColors[v.color] || [100,100,100];
+  doc.setFillColor(...vc.map(c => Math.min(c+100,255)));
+  doc.setDrawColor(...vc);
+  doc.setLineWidth(0.5);
+  doc.roundedRect(M, y, W-M*2, 20, 3, 3, 'FD');
+  doc.setTextColor(...vc.map(c => Math.max(c-80,0)));
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`VERDICT : ${v.status.toUpperCase()}   FS = ${s2.FS}`, W/2, y+12, { align: 'center' });
+  y += 28;
+
+  // EC7 reference
+  section('5. REFERENCE NORMATIVE');
+  doc.setTextColor(60, 80, 100);
+  doc.setFontSize(9);
+  const refs = [
+    'Norme de calcul : Eurocode 7 (EN 1997-1)',
+    'Universite Badji Mokhtar Annaba — Faculte de Technologie — Genie Civil',
+    'Master 2 Geotechnique — Application de prediction par Intelligence Artificielle',
+    'FS >= 3 recommande (charges normales) | FS >= 2 (charges exceptionnelles)',
+  ];
+  refs.forEach(r => { if (y < 275) { doc.text(r, M+3, y); y += 6; } });
+
+  // Footer
+  doc.setFillColor(11, 25, 41);
+  doc.rect(0, 285, W, 12, 'F');
+  doc.setFontSize(8);
+  doc.setTextColor(154, 179, 204);
+  doc.text('GeoPredict — Universite Badji Mokhtar Annaba — Faculte de Technologie — Genie Civil', W/2, 292, { align: 'center' });
+
+  doc.save(`GeoPredict_Rapport_${new Date().toISOString().slice(0,10)}.pdf`);
+}
+
+// ─────────────────────────────────────
+// CHATBOT
+// ─────────────────────────────────────
+let chatOpen = false;
+let chatLangCurrent = 'fr';
+
+// DTR knowledge base
+const dtrKnowledge = {
+  'facteur de sécurité': {
+    fr: { ans: `Selon le DTR BC 2.331, le facteur de sécurité global recommandé est :\n\n• FS ≥ 3 pour les charges permanentes normales\n• FS ≥ 2 pour les charges exceptionnelles ou sismiques\n• FS ≥ 2.5 pour les ouvrages courants`, ref: 'DTR BC 2.331 — Chapitre 4, §4.3 "Vérification de la sécurité", Page 52' },
+    en: { ans: `According to DTR BC 2.331, the recommended global safety factor is:\n\n• FS ≥ 3 for normal permanent loads\n• FS ≥ 2 for exceptional or seismic loads\n• FS ≥ 2.5 for standard structures`, ref: 'DTR BC 2.331 — Chapter 4, §4.3 "Safety Verification", Page 52' },
+    ar: { ans: `وفقاً لـ DTR BC 2.331، معامل الأمان الموصى به هو:\n\n• FS ≥ 3 للأحمال الدائمة العادية\n• FS ≥ 2 للأحمال الاستثنائية أو الزلزالية\n• FS ≥ 2.5 للمنشآت العادية`, ref: 'DTR BC 2.331 — الفصل 4، §4.3 "التحقق من الأمان"، الصفحة 52' }
+  },
+  'profondeur minimale': {
+    fr: { ans: `Selon le DTR BC 2.331, la profondeur minimale d'ancrage est :\n\n• Df ≥ 0.50 m sous le niveau du sol naturel\n• Doit dépasser la profondeur de gel (voir Annexe A)\n• Pour sols argileux : Df ≥ 0.80 m\n• Zone sismique : voir RPA 99/2003`, ref: 'DTR BC 2.331 — Chapitre 2, §2.1 "Profondeur minimale d\'ancrage", Page 23' },
+    en: { ans: `According to DTR BC 2.331, minimum embedment depth:\n\n• Df ≥ 0.50 m below natural ground level\n• Must exceed frost depth (see Annex A)\n• For clay soils: Df ≥ 0.80 m\n• Seismic zone: refer to RPA 99/2003`, ref: 'DTR BC 2.331 — Chapter 2, §2.1 "Minimum Embedment Depth", Page 23' },
+    ar: { ans: `وفقاً لـ DTR BC 2.331، العمق الأدنى للدفن:\n\n• Df ≥ 0.50 م تحت مستوى الأرض الطبيعية\n• يجب تجاوز عمق الصقيع (انظر الملحق A)\n• للتربة الطينية: Df ≥ 0.80 م\n• المنطقة الزلزالية: راجع RPA 99/2003`, ref: 'DTR BC 2.331 — الفصل 2، §2.1 "العمق الأدنى للتأسيس"، الصفحة 23' }
+  },
+  'nappe': {
+    fr: { ans: `Selon le DTR BC 2.331, l'influence de la nappe phréatique est :\n\n• Si Zw ≤ Df : appliquer γ' (poids déjaugé) dans le terme Nq\n• Si Df < Zw < Df+B : interpolation linéaire (Rw1, Rw2)\n• Si Zw ≥ Df+B : aucune correction nécessaire\n\nLe poids déjaugé γ' = γsat - γw (avec γw = 9.81 kN/m³)`, ref: 'DTR BC 2.331 — Chapitre 3, §3.4 "Influence de l\'eau", Page 38' },
+    en: { ans: `According to DTR BC 2.331, groundwater influence:\n\n• If Zw ≤ Df: apply γ' (buoyant weight) in Nq term\n• If Df < Zw < Df+B: linear interpolation (Rw1, Rw2)\n• If Zw ≥ Df+B: no correction needed\n\nBuoyant unit weight γ' = γsat - γw (γw = 9.81 kN/m³)`, ref: 'DTR BC 2.331 — Chapter 3, §3.4 "Water Influence", Page 38' },
+    ar: { ans: `وفقاً لـ DTR BC 2.331، تأثير المياه الجوفية:\n\n• إذا Zw ≤ Df: تطبيق γ' (الوزن الطافي) في حد Nq\n• إذا Df < Zw < Df+B: استيفاء خطي (Rw1, Rw2)\n• إذا Zw ≥ Df+B: لا تصحيح مطلوب\n\nالوزن الطافي γ' = γsat - γw (γw = 9.81 kN/m³)`, ref: 'DTR BC 2.331 — الفصل 3، §3.4 "تأثير الماء"، الصفحة 38' }
+  },
+  'contrainte admissible': {
+    fr: { ans: `Selon le DTR BC 2.331, la contrainte admissible est :\n\nq_adm = qu / FS\n\nAvec FS ≥ 3 (charges normales).\n\nPour une vérification rapide sans essais, le DTR propose des valeurs présomptives (Tableau 3.1) selon le type de sol :\n• Argile ferme : 150–200 kPa\n• Sable dense : 200–300 kPa\n• Gravier : 300–500 kPa`, ref: 'DTR BC 2.331 — Chapitre 3, §3.2 + Tableau 3.1 "Valeurs présomptives", Page 31' },
+    en: { ans: `According to DTR BC 2.331, admissible stress is:\n\nq_adm = qu / FS\n\nWith FS ≥ 3 (normal loads).\n\nFor quick assessment without tests, DTR provides presumptive values (Table 3.1):\n• Stiff clay: 150–200 kPa\n• Dense sand: 200–300 kPa\n• Gravel: 300–500 kPa`, ref: 'DTR BC 2.331 — Chapter 3, §3.2 + Table 3.1 "Presumptive values", Page 31' },
+    ar: { ans: `وفقاً لـ DTR BC 2.331، الإجهاد المسموح به:\n\nq_adm = qu / FS\n\nمع FS ≥ 3 (الأحمال العادية).\n\nللتقييم السريع بدون اختبارات، يقدم DTR قيم افتراضية (الجدول 3.1):\n• الطين الصلب: 150–200 kPa\n• الرمل الكثيف: 200–300 kPa\n• الحصى: 300–500 kPa`, ref: 'DTR BC 2.331 — الفصل 3، §3.2 + الجدول 3.1 "القيم الافتراضية"، الصفحة 31' }
+  },
+  'default': {
+    fr: { ans: `Je suis GeoBot DTR, spécialisé dans le DTR BC 2.331 (Fondations superficielles).\n\nJe peux vous renseigner sur :\n• Facteur de sécurité requis\n• Profondeur minimale de fondation\n• Influence de la nappe phréatique\n• Contrainte admissible du sol\n• Formule de capacité portante EC7\n• Tassements admissibles\n\nPosez votre question précise !`, ref: 'Base : DTR BC 2.331 — Fondations superficielles, Algérie' },
+    en: { ans: `I'm GeoBot DTR, specialized in DTR BC 2.331 (Shallow Foundations).\n\nI can advise on:\n• Required safety factor\n• Minimum foundation depth\n• Groundwater influence\n• Allowable soil stress\n• EC7 bearing capacity formula\n• Allowable settlements\n\nAsk your specific question!`, ref: 'Base: DTR BC 2.331 — Shallow Foundations, Algeria' },
+    ar: { ans: `أنا GeoBot DTR، متخصص في DTR BC 2.331 (الأساسات السطحية).\n\nيمكنني الإجابة عن:\n• معامل الأمان المطلوب\n• الحد الأدنى لعمق الأساس\n• تأثير المياه الجوفية\n• الإجهاد المسموح به\n• صيغة القدرة الحاملة EC7\n• التشوهات المسموح بها\n\nاطرح سؤالك المحدد!`, ref: 'القاعدة: DTR BC 2.331 — الأساسات السطحية، الجزائر' }
+  }
+};
+
+function findDTRAnswer(question, lang) {
+  const q = question.toLowerCase();
+  let key = 'default';
+  if (q.includes('sécurité') || q.includes('security') || q.includes('fs') || q.includes('factor') || q.includes('أمان')) key = 'facteur de sécurité';
+  else if (q.includes('profondeur') || q.includes('depth') || q.includes('minimal') || q.includes('عمق')) key = 'profondeur minimale';
+  else if (q.includes('nappe') || q.includes('water') || q.includes('eau') || q.includes('ماء') || q.includes('جوف')) key = 'nappe';
+  else if (q.includes('admissible') || q.includes('contrainte') || q.includes('stress') || q.includes('إجهاد') || q.includes('مسموح')) key = 'contrainte admissible';
+
+  const entry = dtrKnowledge[key] || dtrKnowledge['default'];
+  return entry[lang] || entry['fr'];
+}
+
+function toggleChat() {
+  chatOpen = !chatOpen;
+  document.getElementById('chatbot-panel').classList.toggle('open', chatOpen);
+}
+
+function setChatLang(lang, btn) {
+  chatLangCurrent = lang;
+  document.querySelectorAll('.chat-lang-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const inp = document.getElementById('chat-input');
+  const placeholders = { fr: 'Posez votre question DTR...', en: 'Ask your DTR question...', ar: 'اطرح سؤالك عن DTR...' };
+  inp.placeholder = placeholders[lang] || placeholders.fr;
+  inp.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+}
+
+function sendQuick(btn) {
+  document.getElementById('chat-input').value = btn.textContent;
+  sendChat();
+}
+
+function addMsg(text, type, ref) {
+  const msgs = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = `chat-msg ${type}`;
+  div.innerHTML = text.replace(/\n/g, '<br>');
+  if (ref) {
+    const refSpan = document.createElement('span');
+    refSpan.className = 'chat-ref';
+    refSpan.textContent = '📚 ' + ref;
+    div.appendChild(refSpan);
+  }
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function showTyping() {
+  const msgs = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = 'chat-typing';
+  div.id = 'typing-indicator';
+  div.innerHTML = '<span></span><span></span><span></span>';
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+
+async function sendChat() {
+  const input = document.getElementById('chat-input');
+  const question = input.value.trim();
+  if (!question) return;
+
+  addMsg(question, 'user');
+  input.value = '';
+
+  const typing = showTyping();
+
+  // Simulate delay
+  await new Promise(r => setTimeout(r, 800 + Math.random() * 600));
+
+  typing.remove();
+
+  const answer = findDTRAnswer(question, chatLangCurrent);
+  addMsg(answer.ans, 'bot', answer.ref);
+}
+
+// Init
+setLang('fr');
+</script>
+</body>
+</html>
