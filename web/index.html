@@ -610,7 +610,8 @@ body {
   background: var(--bg3);
 }
 .nappe-card:hover { border-color: var(--blue); }
-.nappe-card.selected { border-color: var(--blue); background: var(--blue-dim); }
+.nappe-card.selected { border-color: var(--green) !important; background: var(--green-dim) !important; box-shadow: 0 0 8px rgba(0,230,118,0.2); }
+.nappe-card.rejected { border-color: var(--red); background: var(--red-dim); opacity: 0.7; }
 .nappe-icon { font-size: 1.1rem; }
 .nappe-label { font-size: 0.75rem; font-weight: 600; color: var(--text2); }
 .nappe-desc { font-size: 0.65rem; color: var(--text3); }
@@ -1299,9 +1300,29 @@ footer {
 [data-lang="ar"] .s2-val,
 [data-lang="ar"] .gauge-name,
 [data-lang="ar"] .chat-ref { font-family: var(--font-mono); direction: ltr; text-align: left; }
+/* ═══════════════════════════════════════════
+   GLOBAL BACKGROUND CANVAS z-layering
+═══════════════════════════════════════════ */
+.navbar, .hero, #predict-section, #results-section,
+#charts-section, #methodology-section, #about-section,
+footer, .chatbot-fab, .chatbot-panel {
+  position: relative;
+  z-index: 1;
+}
+[data-theme="light"] #geo-bg-canvas { opacity: 0.18; }
 </style>
 </head>
 <body>
+
+<!-- ═══════════════ GLOBAL ANIMATED BACKGROUND ═══════════════ -->
+<canvas id="geo-bg-canvas" style="
+  position:fixed;
+  top:0; left:0;
+  width:100%; height:100%;
+  z-index:0;
+  pointer-events:none;
+  opacity:0.55;
+"></canvas>
 
 <!-- ═══════════════ NAVBAR ═══════════════ -->
 <nav class="navbar">
@@ -1408,6 +1429,7 @@ footer {
           </div>
         </div>
         <div class="ec7-badge">✓ EUROCODE 7</div>
+        <div class="ec7-badge" style="border-color:var(--accent);color:var(--accent);background:var(--accent-glow)">✓ DTR ALGÉRIEN</div>
       </div>
 
       <div class="form-body">
@@ -1760,7 +1782,7 @@ footer {
       <span class="pipe-arrow">→</span>
       <div class="pipe-step">
         <span class="pipe-icon">📋</span>
-        <div class="pipe-name">Eurocode 7</div>
+        <div class="pipe-name">Eurocode 7 <span style="font-size:0.65rem;color:var(--accent);display:block;margin-top:2px">+ DTR BC 2.33</span></div>
         <div class="pipe-desc">Vérification & Verdict</div>
       </div>
       <span class="pipe-arrow">→</span>
@@ -1782,8 +1804,8 @@ footer {
         <span class="metric-label">R² q_adm</span>
       </div>
       <div class="metric-card">
-        <span class="metric-val">EC7</span>
-        <span class="metric-label">NORME</span>
+        <span class="metric-val" style="font-size:1.4rem">EC7<br><span style="font-size:0.9rem;color:var(--accent2)">DTR</span></span>
+        <span class="metric-label">NORMES</span>
       </div>
       <div class="metric-card">
         <span class="metric-val">3</span>
@@ -1826,8 +1848,15 @@ footer {
         <!-- Placeholder for student names -->
         <div style="margin-top:1.5rem;padding:1rem;background:var(--surface);border:1px dashed var(--border);border-radius:var(--radius)">
           <div style="font-size:0.7rem;color:var(--text3);font-family:var(--font-mono);margin-bottom:0.5rem">👤 ÉTUDIANTS DÉVELOPPEURS</div>
-          <div id="student-names" style="color:var(--text2);font-size:0.9rem">
-            <em style="color:var(--text3)" data-i18n="about.names_placeholder">Vos noms ici — à compléter</em>
+          <div id="student-names" style="color:var(--text2);font-size:0.9rem;display:flex;flex-direction:column;gap:0.4rem">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;flex-shrink:0"></span>
+              <span style="font-weight:700;color:var(--text1);letter-spacing:0.5px">Azizi Abderahim</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;flex-shrink:0"></span>
+              <span style="font-weight:700;color:var(--text1);letter-spacing:0.5px">Filali Mohamed Lamine</span>
+            </div>
           </div>
         </div>
       </div>
@@ -1874,6 +1903,10 @@ footer {
   <p class="footer-text">
     Université Badji Mokhtar Annaba · Master 2 Géotechnique<br>
     Faculté de Technologie · Département Génie Civil · Eurocode 7
+  </p>
+  <p style="margin-top:0.75rem;font-size:0.8rem;color:var(--text2);letter-spacing:0.5px">
+    <span style="color:var(--accent)">●</span> Azizi Abderahim &nbsp;·&nbsp;
+    <span style="color:var(--accent)">●</span> Filali Mohamed Lamine
   </p>
   <div class="footer-links">
     <a href="#home" class="footer-link" data-i18n="nav.home">Accueil</a>
@@ -2118,8 +2151,23 @@ function autoSelectNappe() {
     const card = document.getElementById(`nappe-card-${i}`);
     const check = document.getElementById(`nappe-check-${i}`);
     if (card) {
-      card.classList.toggle('selected', i === cas);
-      if(check) check.style.display = i === cas ? 'block' : 'none';
+      const isActive = i === cas;
+      card.classList.toggle('selected', isActive);
+      card.classList.toggle('rejected', !isActive);
+      if (check) {
+        check.style.display = 'block';
+        if (isActive) {
+          check.textContent = '✓';
+          check.style.color = 'var(--green)';
+          check.style.fontWeight = '700';
+          check.style.fontSize = '1.1rem';
+        } else {
+          check.textContent = '✗';
+          check.style.color = 'var(--red)';
+          check.style.fontWeight = '700';
+          check.style.fontSize = '1.1rem';
+        }
+      }
     }
   });
 
@@ -2410,6 +2458,110 @@ function resetForm() {
 }
 
 // ─────────────────────────────────────
+// LOCAL EUROCODE 7 CALCULATION ENGINE
+// (No external API required)
+// ─────────────────────────────────────
+function computeLocal(p) {
+  const rad  = Math.PI / 180;
+  const phi  = p.phi_deg * rad;
+  const tanP = Math.tan(phi);
+  const expPiTanP = Math.exp(Math.PI * tanP);
+
+  // ── Bearing capacity factors (Eurocode 7 / Meyerhof) ──
+  const Nq = expPiTanP * Math.pow(Math.tan(Math.PI/4 + phi/2), 2);
+  const Nc = phi > 0 ? (Nq - 1) / tanP : Math.PI + 2;
+  const Ng = 2 * (Nq - 1) * tanP;   // EC7 form
+
+  // ── Foundation dimensions ──
+  const isCirc = p.Type_fond === 'Circulaire';
+  const B = isCirc ? p.R_m * 2 : p.B_m;
+  const L = isCirc ? p.R_m * 2 : (p.L_m || p.B_m);  // square fallback
+
+  // ── Shape factors (Vesic / EC7) ──
+  let sq, sc, sg;
+  if (isCirc || p.Type_fond === 'Carree' || p.Type_fond === 'Carrée' || B === L) {
+    sq = 1 + tanP;
+    sc = (Nq > 1) ? 1 + Nq/Nc : 1.2;
+    sg = 0.6;
+  } else {
+    const r = B / L;
+    sq = 1 + r * tanP;
+    sc = (Nq > 1) ? 1 + r * (Nq/Nc) : 1 + 0.2*r;
+    sg = 1 - 0.4 * r;
+    if (sg < 0.6) sg = 0.6;
+  }
+
+  // ── Water table corrections (EC7 / DTR BC 2.33) ──
+  const gamma_w = 9.81;
+  const gamma_eff = p.gamma_sat - gamma_w;  // poids déjaugé γ' = γsat - γw
+  let Rw1 = 1.0, Rw2 = 1.0;
+  let gamma1, gamma2;  // γ effectif pour terme Nq et terme Nγ respectivement
+
+  if (p.cas_nappe === 0) {
+    // Cas 0 : nappe sans influence (Zw ≥ Df + B)
+    // On utilise γ naturel pour les deux termes
+    Rw1 = 1.0;
+    Rw2 = 1.0;
+    gamma1 = p.gamma_kNm3;
+    gamma2 = p.gamma_kNm3;
+
+  } else if (p.cas_nappe === 1) {
+    // Cas 1 : nappe au niveau ou au-dessus de la fondation (Zw ≤ Df)
+    // Les deux termes utilisent le poids déjaugé γ'
+    Rw1 = 0.5;
+    Rw2 = 0.5;
+    gamma1 = gamma_eff;
+    gamma2 = gamma_eff;
+
+  } else if (p.cas_nappe === 2) {
+    // Cas 2 : nappe dans la zone d'influence B (Df < Zw < Df + B)
+    // Terme Nq : γ naturel (nappe sous la fondation)
+    // Terme Nγ : interpolation linéaire entre γ naturel et γ'
+    const z = p.Zw_m - p.Df_m;  // distance entre fondation et nappe
+    Rw1 = 1.0;
+    Rw2 = 0.5 + 0.5 * (z / B);
+    if (Rw2 > 1.0) Rw2 = 1.0;
+    if (Rw2 < 0.5) Rw2 = 0.5;
+    gamma1 = p.gamma_kNm3;
+    gamma2 = Rw2 * p.gamma_kNm3 + (1 - Rw2) * gamma_eff;
+  }
+
+  // ── Ultimate bearing capacity (EC7 / DTR BC 2.33) ──
+  // qu = c·Nc·sc + γ1·Df·Nq·sq + 0.5·γ2·B·Nγ·sγ
+  const qu = p.c_kPa * Nc * sc
+           + gamma1 * p.Df_m * Nq * sq
+           + 0.5 * gamma2 * B * Ng * sg;
+
+  // Exposer les valeurs pour affichage dans le rapport
+  const gamma_eff_kNm3 = gamma_eff;
+
+  // ── Safety & admissible ──
+  const FS_val = p.q_app_kPa > 0 ? qu / p.q_app_kPa : 999;
+  const q_adm  = qu / 3;
+
+  // ── Verdict ──
+  let color, status;
+  if (FS_val >= 3.2)      { color = 'green';  status = 'TRÈS SÛR'; }
+  else if (FS_val >= 2.5) { color = 'blue';   status = 'SÛR'; }
+  else if (FS_val >= 2.0) { color = 'yellow'; status = 'LIMITE'; }
+  else                    { color = 'red';    status = 'INSUFFISANT'; }
+
+  return {
+    stage1: { Nq, Nc, Ng, sq, sc, sg },
+    stage2: { qu_kPa: qu, q_adm_kPa: q_adm, FS: FS_val },
+    verdict: { color, status },
+    inputs: {
+      ...p,
+      Rw1, Rw2,
+      gamma_eff_kNm3,
+      gamma1,
+      gamma2,
+      B_eff: B,
+    }
+  };
+}
+
+// ─────────────────────────────────────
 // MAIN CALCULATE
 // ─────────────────────────────────────
 async function calculate() {
@@ -2436,29 +2588,55 @@ async function calculate() {
       return;
     }
   }
+  // Foundation dimension validation
+  const isCirc = payload.Type_fond === 'Circulaire';
+  if (isCirc && !(payload.R_m > 0)) {
+    alert('⚠️ Veuillez entrer le rayon de la fondation circulaire.');
+    return;
+  }
+  if (!isCirc && !(payload.B_m > 0)) {
+    alert('⚠️ Veuillez entrer la largeur B de la fondation.');
+    return;
+  }
 
   // Show loading
   const overlay = document.getElementById('loading-overlay');
   overlay.classList.add('active');
 
-  try {
-    const response = await fetch(`${API_URL}/predict`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
+  // Small delay for UX (shows the loading animation)
+  await new Promise(r => setTimeout(r, 520));
 
-    if (!response.ok) {
-      const err = await response.json();
-      throw new Error(err.detail || 'Erreur API');
+  try {
+    let data;
+
+    // Try the remote API first; fall back to local engine if unreachable
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
+      const response = await fetch(`${API_URL}/predict`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+      if (response.ok) {
+        data = await response.json();
+        // Merge local inputs for display compatibility
+        data.inputs = { ...data.inputs, ...payload };
+      } else {
+        throw new Error('API error');
+      }
+    } catch (_) {
+      // API unavailable → compute locally
+      data = computeLocal(payload);
     }
 
-    const data = await response.json();
-    lastResults = { ...data, inputs: payload };
-    displayResults(data, payload);
+    lastResults = { ...data, inputs: data.inputs || payload };
+    displayResults(data, data.inputs || payload);
 
   } catch (e) {
-    alert(`❌ Erreur : ${e.message}\n\nVérifiez que l'API est démarrée sur Render.com`);
+    alert(`❌ Erreur de calcul : ${e.message}`);
   } finally {
     overlay.classList.remove('active');
   }
@@ -2488,10 +2666,11 @@ function displayResults(data, inp) {
   document.getElementById('r-qadm').textContent = s2.q_adm_kPa.toFixed(1);
   document.getElementById('r-fs').textContent   = s2.FS.toFixed(3);
 
-  // Corrections
-  document.getElementById('r-rw1').textContent  = data.inputs.Rw1.toFixed(4);
-  document.getElementById('r-rw2').textContent  = data.inputs.Rw2.toFixed(4);
-  document.getElementById('r-geff').textContent = data.inputs.gamma_eff_kNm3.toFixed(2);
+  // Corrections — support both API response format and local engine format
+  const corrData = data.inputs || inp;
+  document.getElementById('r-rw1').textContent  = (corrData.Rw1  != null ? corrData.Rw1  : 1).toFixed(4);
+  document.getElementById('r-rw2').textContent  = (corrData.Rw2  != null ? corrData.Rw2  : 1).toFixed(4);
+  document.getElementById('r-geff').textContent = (corrData.gamma_eff_kNm3 != null ? corrData.gamma_eff_kNm3 : (inp.gamma_sat - 9.81)).toFixed(2);
 
   // Verdict
   const colorMap = { green:'✅', blue:'🔵', yellow:'⚠️', red:'🔴' };
@@ -2899,7 +3078,7 @@ async function downloadPDF() {
   doc.text('GEOPREDICT', M, 18);
   doc.setFontSize(10);
   doc.setTextColor(154, 179, 204);
-  doc.text('Rapport de Capacite Portante — Eurocode 7', M, 26);
+  doc.text('Rapport de Capacite Portante — Eurocode 7 & DTR BC 2.33', M, 26);
   doc.setTextColor(0, 230, 118);
   doc.text(`R2 max = 0.9659  |  Intelligence Artificielle  |  Eurocode 7`, M, 33);
 
@@ -2965,10 +3144,15 @@ async function downloadPDF() {
   y += 3;
 
   // Corrections
-  section('2. CORRECTIONS NAPPE PHREATIQUE');
-  row('Coefficient Rw1 (terme Nq)', lastResults.inputs.Rw1);
-  row('Coefficient Rw2 (terme Ng)', lastResults.inputs.Rw2);
-  row('Poids volumique effectif gamma_eff', `${lastResults.inputs.gamma_eff_kNm3} kN/m3`);
+  section('2. CORRECTIONS NAPPE PHREATIQUE (EC7 / DTR BC 2.33)');
+  const casLabel = ['Cas 0 — Sans influence (Zw >= Df+B)', 'Cas 1 — Nappe au-dessus de la fondation (Zw <= Df)', 'Cas 2 — Nappe dans la zone B (Df < Zw < Df+B)'];
+  row('Cas nappe detecte', casLabel[inp.cas_nappe] || inp.cas_nappe);
+  row('Coefficient Rw1 (terme Nq)', typeof inp.Rw1 === 'number' ? inp.Rw1.toFixed(4) : inp.Rw1);
+  row('Coefficient Rw2 (terme Ngamma)', typeof inp.Rw2 === 'number' ? inp.Rw2.toFixed(4) : inp.Rw2);
+  row('Poids volumique naturel gamma', `${inp.gamma_kNm3} kN/m3`);
+  row('Poids volumique dejauge gamma\' = gammasat - gammaeau', `${typeof inp.gamma_eff_kNm3 === 'number' ? inp.gamma_eff_kNm3.toFixed(2) : inp.gamma_eff_kNm3} kN/m3`);
+  row('gamma1 applique (terme Nq)', `${typeof inp.gamma1 === 'number' ? inp.gamma1.toFixed(2) : inp.gamma_kNm3} kN/m3`);
+  row('gamma2 applique (terme Ngamma)', `${typeof inp.gamma2 === 'number' ? inp.gamma2.toFixed(2) : inp.gamma_kNm3} kN/m3`);
   y += 3;
 
   // Stage 1
@@ -3006,12 +3190,118 @@ async function downloadPDF() {
   doc.setTextColor(60, 80, 100);
   doc.setFontSize(9);
   const refs = [
-    'Norme de calcul : Eurocode 7 (EN 1997-1)',
+    'Norme de calcul : Eurocode 7 (EN 1997-1) & DTR BC 2.33 (Algerie)',
     'Universite Badji Mokhtar Annaba — Faculte de Technologie — Genie Civil',
     'Master 2 Geotechnique — Application de prediction par Intelligence Artificielle',
     'FS >= 3 recommande (charges normales) | FS >= 2 (charges exceptionnelles)',
+    'Etudiants : Azizi Abderahim & Filali Mohamed Lamine',
+    'Encadrant : Pr. Sbartai Badreddine',
   ];
   refs.forEach(r => { if (y < 275) { doc.text(r, M+3, y); y += 6; } });
+
+  // ── Page 2 : Schéma de fondation ──
+  doc.addPage();
+  y = 15;
+  doc.setFillColor(11, 25, 41);
+  doc.rect(0, 0, W, 14, 'F');
+  doc.setTextColor(255, 140, 0);
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.text('GEOPREDICT — SCHEMA DE FONDATION (AUTO-GENERE)', M, 9.5);
+
+  // Helper : capture a canvas at 3× resolution for crisp PDF rendering
+  function captureHiRes(canvas, scale) {
+    scale = scale || 3;
+    const offscreen = document.createElement('canvas');
+    offscreen.width  = canvas.width  * scale;
+    offscreen.height = canvas.height * scale;
+    const ctx2 = offscreen.getContext('2d');
+    ctx2.scale(scale, scale);
+    ctx2.drawImage(canvas, 0, 0);
+    return offscreen.toDataURL('image/png', 1.0);
+  }
+
+  // Helper : capture a Chart.js canvas at 3× via its own API
+  function captureChartHiRes(canvasEl, scale) {
+    scale = scale || 3;
+    const orig = { w: canvasEl.width, h: canvasEl.height };
+    // Temporarily enlarge the backing store
+    canvasEl.width  = orig.w * scale;
+    canvasEl.height = orig.h * scale;
+    const ctx2 = canvasEl.getContext('2d');
+    ctx2.scale(scale, scale);
+    // Redraw the chart at new size
+    const chartInst = Object.values(Chart.instances).find(c => c.canvas === canvasEl);
+    if (chartInst) {
+      chartInst.resize();
+      chartInst.draw();
+    }
+    const dataUrl = canvasEl.toDataURL('image/png', 1.0);
+    // Restore original size
+    canvasEl.width  = orig.w;
+    canvasEl.height = orig.h;
+    if (chartInst) { chartInst.resize(); chartInst.draw(); }
+    return dataUrl;
+  }
+
+  // ── Schéma de fondation (hi-res) ──
+  const foundCanvas = document.getElementById('foundation-canvas');
+  if (foundCanvas) {
+    try {
+      // Redraw at 3× resolution on an offscreen canvas
+      const SCALE = 3;
+      const off = document.createElement('canvas');
+      off.width  = foundCanvas.width  * SCALE;
+      off.height = foundCanvas.height * SCALE;
+      const offCtx = off.getContext('2d');
+      offCtx.scale(SCALE, SCALE);
+      offCtx.drawImage(foundCanvas, 0, 0);
+      const foundImg = off.toDataURL('image/png', 1.0);
+      const pdfH = Math.round((foundCanvas.height / foundCanvas.width) * (W - M*2));
+      doc.addImage(foundImg, 'PNG', M, 20, W - M*2, Math.min(pdfH, 85));
+      y = 20 + Math.min(pdfH, 85) + 6;
+    } catch(e) { y = 25; }
+  }
+
+  // ── Graphiques (hi-res, une par page si besoin) ──
+  const chartConfigs = [
+    { id: 'chart-mohr',   label: 'Enveloppe de Mohr-Coulomb',                    h: 68 },
+    { id: 'chart-fsphi',  label: 'FS vs phi (Angle de frottement)',               h: 68 },
+    { id: 'chart-qudf',   label: 'qu vs Df (Profondeur d\'encastrement)',          h: 68 },
+    { id: 'chart-fsqapp', label: 'FS vs q_app (Charge appliquee)',                 h: 68 },
+    { id: 'chart-radar',  label: 'Sensibilite des Parametres (Feature Importance)', h: 90 },
+  ];
+
+  for (const cfg of chartConfigs) {
+    const canvasEl = document.getElementById(cfg.id);
+    if (!canvasEl) continue;
+    try {
+      // New page if not enough room
+      if (y + cfg.h + 14 > 282) { doc.addPage(); y = 15; }
+
+      // Chart title bar
+      doc.setFillColor(26, 46, 66);
+      doc.rect(M, y, W - M*2, 7, 'F');
+      doc.setTextColor(255, 140, 0);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.text(cfg.label, M + 3, y + 5);
+      y += 8;
+
+      // Hi-res capture via offscreen canvas
+      const SCALE = 3;
+      const off = document.createElement('canvas');
+      off.width  = canvasEl.width  * SCALE;
+      off.height = canvasEl.height * SCALE;
+      const offCtx = off.getContext('2d');
+      offCtx.scale(SCALE, SCALE);
+      offCtx.drawImage(canvasEl, 0, 0);
+      const imgData = off.toDataURL('image/png', 1.0);
+
+      doc.addImage(imgData, 'PNG', M, y, W - M*2, cfg.h);
+      y += cfg.h + 5;
+    } catch(e) {}
+  }
 
   // Footer
   doc.setFillColor(11, 25, 41);
@@ -3137,6 +3427,205 @@ async function sendChat() {
 
 // Init
 setLang('fr');
+</script>
+
+<!-- ═══════════════ GLOBAL BACKGROUND ANIMATION ═══════════════ -->
+<script>
+(function() {
+  const canvas = document.getElementById('geo-bg-canvas');
+  const ctx = canvas.getContext('2d');
+
+  let W, H, dpr;
+  const PARTICLE_COUNT = 90;
+  const LINE_DIST = 140;
+  let particles = [];
+  let mouse = { x: -9999, y: -9999 };
+
+  // Soil layer colours matching the site's dark theme
+  const ACCENT = '#ff8c00';
+  const BLUE   = '#29b6f6';
+  const GREEN  = '#00e676';
+
+  class Particle {
+    constructor() { this.reset(true); }
+    reset(init) {
+      this.x  = Math.random() * W;
+      this.y  = init ? Math.random() * H : (Math.random() < 0.5 ? -10 : H + 10);
+      this.vx = (Math.random() - 0.5) * 0.35;
+      this.vy = (Math.random() - 0.5) * 0.35;
+      this.r  = Math.random() * 1.8 + 0.6;
+      // assign a colour
+      const roll = Math.random();
+      this.color = roll < 0.55 ? ACCENT : (roll < 0.8 ? BLUE : GREEN);
+      this.alpha = Math.random() * 0.55 + 0.25;
+      // extra: a few are "soil-node" crosses
+      this.cross = Math.random() < 0.12;
+    }
+    update() {
+      // Gentle mouse repulsion
+      const dx = this.x - mouse.x;
+      const dy = this.y - mouse.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 100 && dist > 0) {
+        const force = (100 - dist) / 100;
+        this.vx += (dx / dist) * force * 0.4;
+        this.vy += (dy / dist) * force * 0.4;
+      }
+      // Speed limit
+      const speed = Math.sqrt(this.vx*this.vx + this.vy*this.vy);
+      if (speed > 1.2) { this.vx *= 0.95; this.vy *= 0.95; }
+
+      this.x += this.vx;
+      this.y += this.vy;
+
+      if (this.x < -20) this.x = W + 20;
+      if (this.x > W + 20) this.x = -20;
+      if (this.y < -20) this.y = H + 20;
+      if (this.y > H + 20) this.y = -20;
+    }
+    draw() {
+      ctx.save();
+      ctx.globalAlpha = this.alpha;
+      ctx.fillStyle = this.color;
+      if (this.cross) {
+        // Draw a tiny cross / node symbol (geotechnical bore-hole symbol)
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = 1;
+        ctx.globalAlpha = this.alpha * 0.8;
+        ctx.beginPath();
+        ctx.moveTo(this.x - 4, this.y); ctx.lineTo(this.x + 4, this.y);
+        ctx.moveTo(this.x, this.y - 4); ctx.lineTo(this.x, this.y + 4);
+        ctx.stroke();
+      } else {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+  }
+
+  // Floating soil-layer lines (horizontal strata)
+  const STRATA = [0.22, 0.45, 0.68, 0.85].map(pct => ({
+    yBase: pct,
+    phase: Math.random() * Math.PI * 2,
+    speed: 0.0004 + Math.random() * 0.0004,
+    amp:   18 + Math.random() * 22,
+    color: pct < 0.5 ? ACCENT : BLUE,
+    alpha: 0.07 + Math.random() * 0.06,
+  }));
+
+  // Animated stress-arc grid (like bearing capacity diagrams)
+  const ARCS = Array.from({length: 5}, (_, i) => ({
+    phase: (i / 5) * Math.PI * 2,
+    speed: 0.0008 + i * 0.0003,
+    color: i % 2 === 0 ? ACCENT : BLUE,
+    alpha: 0.04,
+  }));
+
+  function resize() {
+    dpr = window.devicePixelRatio || 1;
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width  = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width  = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function init() {
+    resize();
+    particles = Array.from({length: PARTICLE_COUNT}, () => new Particle());
+  }
+
+  let t = 0;
+  function frame() {
+    ctx.clearRect(0, 0, W, H);
+    t++;
+
+    // — Soil strata undulating lines —
+    STRATA.forEach(s => {
+      const y0 = s.yBase * H;
+      ctx.beginPath();
+      ctx.moveTo(0, y0);
+      for (let x = 0; x <= W; x += 4) {
+        const wave = Math.sin(x * 0.008 + s.phase + t * s.speed * 60) * s.amp
+                   + Math.sin(x * 0.003 + s.phase * 1.3 + t * s.speed * 40) * (s.amp * 0.4);
+        ctx.lineTo(x, y0 + wave);
+      }
+      ctx.strokeStyle = s.color;
+      ctx.lineWidth = 1.2;
+      ctx.globalAlpha = s.alpha;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    });
+
+    // — Bearing-capacity stress arcs —
+    ARCS.forEach((a, i) => {
+      const cx = W * 0.5;
+      const cy = H * (0.3 + i * 0.12);
+      const rx = W * (0.18 + i * 0.04);
+      const ry = H * (0.06 + i * 0.02);
+      ctx.save();
+      ctx.globalAlpha = a.alpha + 0.03 * Math.sin(t * a.speed * 60 + a.phase);
+      ctx.strokeStyle = a.color;
+      ctx.lineWidth = 1;
+      ctx.setLineDash([6, 10]);
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    });
+
+    // — Particle network —
+    particles.forEach(p => p.update());
+
+    // Draw lines between close particles
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i + 1; j < particles.length; j++) {
+        const a = particles[i], b = particles[j];
+        const dx = a.x - b.x, dy = a.y - b.y;
+        const d = Math.sqrt(dx*dx + dy*dy);
+        if (d < LINE_DIST) {
+          const alpha = (1 - d / LINE_DIST) * 0.18;
+          ctx.save();
+          ctx.globalAlpha = alpha;
+          ctx.strokeStyle = a.color;
+          ctx.lineWidth = 0.7;
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+    }
+
+    particles.forEach(p => p.draw());
+
+    requestAnimationFrame(frame);
+  }
+
+  // Track mouse
+  window.addEventListener('mousemove', e => {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+  });
+  window.addEventListener('mouseleave', () => { mouse.x = -9999; mouse.y = -9999; });
+  window.addEventListener('resize', () => { resize(); });
+
+  // Reduce opacity in light theme
+  const obs = new MutationObserver(() => {
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    canvas.style.opacity = isLight ? '0.18' : '0.55';
+  });
+  obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+  init();
+  frame();
+})();
 </script>
 </body>
 </html>

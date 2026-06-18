@@ -83,37 +83,76 @@ class PredictionInput(BaseModel):
 
 
 # ─────────────────────────────────────────────
-#  Helper — compute Rw1, Rw2, gamma_eff
+#  Helper — compute Rw1, Rw2, gamma1av, gamma2av
+#  Selon le cours Pr. Sbartai — Chapitre 2, pp. 9-10
 # ─────────────────────────────────────────────
 def compute_water_corrections(inp: PredictionInput):
     """
-    Rw1, Rw2, gamma_eff selon Eurocode 7 / Das (2011)
-    cas=0 : pas d'influence
-    cas=1 : nappe au-dessus de la fondation
-    cas=2 : nappe dans la zone d'influence B
+    Correction nappe phréatique selon Pr. Sbartai (cours Fondations Superficielles)
+
+    CAS 0 : Zw >= Df + B  →  aucune influence
+    CAS 1 : Zw <= Df      →  nappe au-dessus de la base de la fondation
+             zw1 = Zw_m (profondeur nappe depuis surface)
+             Rw1 = ½(1 + zw1/D)
+             Rw2 = ½(1 + zw2/B)  avec zw2=0 (nappe au niveau fondation)
+             γ1av = (γ1·zw1 + γ1sat·(D-zw1)) / D
+
+    CAS 2 : Df < Zw < Df+B  →  nappe sous la fondation, dans zone d'influence B
+             zw1 = Df (nappe en dessous → terme Nq non affecté → Rw1=1)
+             zw2 = Zw_m - Df (distance nappe sous la fondation)
+             Rw1 = ½(1 + zw1/D) = ½(1 + D/D) = 1.0
+             Rw2 = ½(1 + zw2/B)
+             γ2av = (γ2·zw2 + γ2sat·(B-zw2)) / B
     """
-    gamma_w = 9.81  # kN/m³
-    gamma_eff_sat = inp.gamma_sat - gamma_w  # poids déjaugé
+    gamma_w   = 9.81                        # kN/m³
+    gamma_sat = inp.gamma_sat               # γsat
+    gamma_nat = inp.gamma_kNm3             # γ naturel
+    gamma_dej = gamma_sat - gamma_w        # γ' déjaugé = γsat - γw
+    D  = inp.Df_m
+    Zw = inp.Zw_m
+    B  = inp.B_m if inp.B_m > 0 else (2.0 * inp.R_m if inp.R_m > 0 else 1.0)
 
     if inp.cas_nappe == 0:
-        Rw1 = 1.0
-        Rw2 = 1.0
-        gamma_eff = inp.gamma_kNm3
-    elif inp.cas_nappe == 1:
-        # Nappe au-dessus ou au niveau de la fondation
-        Rw1 = 0.5
-        Rw2 = 0.5
-        gamma_eff = gamma_eff_sat
-    else:
-        # cas=2 : nappe dans la zone d'influence (Df < Zw < Df+B)
-        B_ref = inp.B_m if inp.B_m > 0 else (2 * inp.R_m if inp.R_m > 0 else 1.0)
-        zw_rel = inp.Zw_m - inp.Df_m  # distance nappe sous la fondation
-        ratio  = min(max(zw_rel / B_ref, 0.0), 1.0)
-        Rw1 = 0.5 + 0.5 * ratio
-        Rw2 = 0.5 + 0.5 * ratio
-        gamma_eff = inp.gamma_kNm3 * ratio + gamma_eff_sat * (1 - ratio)
+        # ── Cas 0 : aucune influence ──
+        Rw1      = 1.0
+        Rw2      = 1.0
+        gamma1av = gamma_nat   # γ naturel pour terme Nq
+        gamma2av = gamma_nat   # γ naturel pour terme Nγ
 
-    return Rw1, Rw2, gamma_eff
+    elif inp.cas_nappe == 1:
+        # ── Cas 1 : nappe au-dessus ou au niveau de la fondation (Zw <= Df) ──
+        # Pr. Sbartai p.9 :
+        #   zw1 = Zw (profondeur nappe depuis surface)
+        #   zw2 = 0  (nappe est au niveau ou au-dessus de la base → sol saturé sous fondation)
+        #   Rw1 = ½(1 + zw1/D)
+        #   Rw2 = ½(1 + zw2/B) = ½(1 + 0/B) = 0.5
+        #   γ1av = (γnat·zw1 + γsat·(D - zw1)) / D
+        zw1 = min(Zw, D)                           # nappe depuis surface (clampé à D)
+        zw2 = 0.0                                   # sol sous fondation entièrement saturé
+        Rw1 = 0.5 * (1.0 + zw1 / D)
+        Rw2 = 0.5 * (1.0 + zw2 / B)               # = 0.5
+        gamma1av = (gamma_nat * zw1 + gamma_sat * (D - zw1)) / D
+        gamma2av = gamma_dej                        # sol sous fondation = γ déjaugé
+
+    else:
+        # ── Cas 2 : nappe sous la fondation, dans la zone B (Df < Zw < Df+B) ──
+        # Pr. Sbartai p.10 :
+        #   zw1 = D (nappe sous fondation → terme surcharge non affecté)
+        #   zw2 = Zw - Df (distance nappe depuis base fondation)
+        #   Rw1 = ½(1 + zw1/D) = ½(1 + 1) = 1.0
+        #   Rw2 = ½(1 + zw2/B)
+        #   γ2av = (γnat·zw2 + γsat·(B - zw2)) / B
+        zw1 = D                                     # → Rw1 = 1.0
+        zw2 = min(Zw - D, B)                       # distance nappe sous fondation (clampé à B)
+        Rw1 = 0.5 * (1.0 + zw1 / D)               # = 1.0
+        Rw2 = 0.5 * (1.0 + zw2 / B)
+        gamma1av = gamma_nat                        # sol au-dessus fondation = γ naturel
+        gamma2av = (gamma_nat * zw2 + gamma_dej * (B - zw2)) / B
+
+    # gamma_eff_kNm3 : valeur représentative pour les features RF (moyenne pondérée)
+    gamma_eff = (gamma1av + gamma2av) / 2.0
+
+    return Rw1, Rw2, gamma_eff, gamma1av, gamma2av
 
 
 # ─────────────────────────────────────────────
@@ -125,8 +164,8 @@ def predict(inp: PredictionInput):
         raise HTTPException(status_code=503, detail="Modèles non chargés")
 
     try:
-        # ── Water corrections ──
-        Rw1, Rw2, gamma_eff = compute_water_corrections(inp)
+        # ── Water corrections (Pr. Sbartai) ──
+        Rw1, Rw2, gamma_eff, gamma1av, gamma2av = compute_water_corrections(inp)
 
         # ── Stage 1 features ──
         X1 = pd.DataFrame([{
@@ -210,9 +249,11 @@ def predict(inp: PredictionInput):
         return {
             "success": True,
             "inputs": {
-                "Rw1": round(Rw1, 4),
-                "Rw2": round(Rw2, 4),
+                "Rw1":            round(Rw1,      4),
+                "Rw2":            round(Rw2,      4),
                 "gamma_eff_kNm3": round(gamma_eff, 4),
+                "gamma1av":       round(gamma1av,  4),
+                "gamma2av":       round(gamma2av,  4),
             },
             "stage1": {
                 "Nq": round(Nq_p, 4),
