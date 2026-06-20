@@ -1305,10 +1305,12 @@ footer {
 ═══════════════════════════════════════════ */
 .navbar, .hero, #predict-section, #results-section,
 #charts-section, #methodology-section, #about-section,
-footer, .chatbot-fab, .chatbot-panel {
+footer {
   position: relative;
   z-index: 1;
 }
+.chatbot-fab { z-index: 500; }
+.chatbot-panel { z-index: 499; }
 [data-theme="light"] #geo-bg-canvas { opacity: 0.18; }
 </style>
 </head>
@@ -1607,12 +1609,12 @@ footer, .chatbot-fab, .chatbot-panel {
         <span class="verdict-icon" id="verdict-icon">✅</span>
         <div>
           <div class="verdict-title" id="verdict-title">—</div>
-          <div class="verdict-sub" id="verdict-sub">FS · Facteur de Sécurité</div>
+          <div class="verdict-sub" id="verdict-sub" data-i18n="verdict.sub">FS · Facteur de Sécurité</div>
         </div>
       </div>
       <div class="verdict-right">
         <div class="verdict-fs" id="verdict-fs">—</div>
-        <div class="verdict-fs-label">FACTEUR DE SÉCURITÉ</div>
+        <div class="verdict-fs-label" data-i18n="verdict.fs.label">FACTEUR DE SÉCURITÉ</div>
       </div>
     </div>
 
@@ -1663,23 +1665,23 @@ footer, .chatbot-fab, .chatbot-panel {
           <div class="s2-item" style="border-color:var(--accent)">
             <span class="s2-val" id="r-qu" style="color:var(--accent)">—</span>
             <span class="s2-unit">kPa</span>
-            <span class="s2-name">qu — Ultime</span>
+            <span class="s2-name" data-i18n="s2.ultimate">qu — Ultime</span>
           </div>
           <div class="s2-item" style="border-color:var(--green)">
             <span class="s2-val" id="r-qadm" style="color:var(--green)">—</span>
             <span class="s2-unit">kPa</span>
-            <span class="s2-name">q_adm — Admissible</span>
+            <span class="s2-name" data-i18n="s2.admissible">q_adm — Admissible</span>
           </div>
           <div class="s2-item">
             <span class="s2-val" id="r-fs" style="color:var(--blue)">—</span>
             <span class="s2-unit"></span>
-            <span class="s2-name">FS — Sécurité</span>
+            <span class="s2-name" data-i18n="s2.safety">FS — Sécurité</span>
           </div>
         </div>
 
         <!-- Correction factors -->
         <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)">
-          <div style="font-size:0.65rem;color:var(--text3);font-family:var(--font-mono);letter-spacing:1px;margin-bottom:8px">CORRECTIONS NAPPE</div>
+          <div style="font-size:0.65rem;color:var(--text3);font-family:var(--font-mono);letter-spacing:1px;margin-bottom:8px" data-i18n="results.waterfix">CORRECTIONS NAPPE</div>
           <div style="display:flex;gap:1rem;flex-wrap:wrap">
             <span style="font-size:0.8rem">Rw1 = <strong id="r-rw1" style="color:var(--accent)">—</strong></span>
             <span style="font-size:0.8rem">Rw2 = <strong id="r-rw2" style="color:var(--accent)">—</strong></span>
@@ -1991,7 +1993,7 @@ const i18n = {
     "type.rect":"Rect.","type.square":"Carrée","type.circ":"Circ.",
     "nappe.0":"Cas 0 — Sans influence","nappe.1":"Cas 1 — Nappe ≤ Df","nappe.2":"Cas 2 — Dans zone B",
     "results.tag":"Résultats de Prédiction","results.title":"ANALYSE STRUCTURELLE",
-    "results.stage1":"Stage 1 — Facteurs de portance & forme","results.stage2":"Stage 2 — Capacité portante",
+    "results.stage1":"Stage 1 — Facteurs de portance & forme","results.stage2":"Stage 2 — Capacité portante","verdict.sub":"FS · Facteur de Sécurité","verdict.fs.label":"FACTEUR DE SÉCURITÉ","s2.ultimate":"qu — Ultime","s2.admissible":"q_adm — Admissible","s2.safety":"FS — Sécurité","results.waterfix":"CORRECTIONS NAPPE","verdict.verysafe":"TRÈS SÛR","verdict.safe":"SÛR","verdict.limit":"LIMITE","verdict.insufficient":"INSUFFISANT",
     "drawing.title":"DESSIN SCHÉMATIQUE — FONDATION (AUTO-GÉNÉRÉ)",
     "btn.pdf":"Télécharger Rapport PDF","btn.charts":"Voir les Courbes",
     "charts.tag":"Analyses Graphiques","charts.title":"COURBES DE SENSIBILITÉ",
@@ -2021,7 +2023,7 @@ const i18n = {
     "type.rect":"Rect.","type.square":"Square","type.circ":"Circ.",
     "nappe.0":"Case 0 — No influence","nappe.1":"Case 1 — Table ≤ Df","nappe.2":"Case 2 — In B zone",
     "results.tag":"Prediction Results","results.title":"STRUCTURAL ANALYSIS",
-    "results.stage1":"Stage 1 — Bearing & shape factors","results.stage2":"Stage 2 — Bearing capacity",
+    "results.stage1":"Stage 1 — Bearing & shape factors","results.stage2":"Stage 2 — Bearing capacity","verdict.sub":"FS · Safety Factor","verdict.fs.label":"SAFETY FACTOR","s2.ultimate":"qu — Ultimate","s2.admissible":"q_adm — Allowable","s2.safety":"FS — Safety","results.waterfix":"WATER TABLE CORRECTIONS","verdict.verysafe":"VERY SAFE","verdict.safe":"SAFE","verdict.limit":"BORDERLINE","verdict.insufficient":"INSUFFICIENT",
     "drawing.title":"SCHEMATIC DRAWING — FOUNDATION (AUTO-GENERATED)",
     "btn.pdf":"Download PDF Report","btn.charts":"View Charts",
     "charts.tag":"Graphical Analysis","charts.title":"SENSITIVITY CURVES",
@@ -2051,7 +2053,7 @@ const i18n = {
     "type.rect":"مستطيل","type.square":"مربع","type.circ":"دائري",
     "nappe.0":"الحالة 0 — بدون تأثير","nappe.1":"الحالة 1 — المياه ≤ Df","nappe.2":"الحالة 2 — في المنطقة B",
     "results.tag":"نتائج التنبؤ","results.title":"التحليل الإنشائي",
-    "results.stage1":"المرحلة 1 — معاملات الحمل والشكل","results.stage2":"المرحلة 2 — القدرة الحاملة",
+    "results.stage1":"المرحلة 1 — معاملات الحمل والشكل","results.stage2":"المرحلة 2 — القدرة الحاملة","verdict.sub":"FS · معامل الأمان","verdict.fs.label":"معامل الأمان","s2.ultimate":"qu — الأقصى","s2.admissible":"q_adm — المسموح","s2.safety":"FS — الأمان","results.waterfix":"تصحيحات المياه الجوفية","verdict.verysafe":"آمن جداً","verdict.safe":"آمن","verdict.limit":"حدي","verdict.insufficient":"غير كافٍ",
     "drawing.title":"رسم تخطيطي — الأساس (توليد تلقائي)",
     "btn.pdf":"تحميل تقرير PDF","btn.charts":"عرض المنحنيات",
     "charts.tag":"التحليل البياني","charts.title":"منحنيات الحساسية",
@@ -2541,10 +2543,12 @@ function computeLocal(p) {
 
   // ── Verdict ──
   let color, status;
-  if (FS_val >= 3.2)      { color = 'green';  status = 'TRÈS SÛR'; }
-  else if (FS_val >= 2.5) { color = 'blue';   status = 'SÛR'; }
-  else if (FS_val >= 2.0) { color = 'yellow'; status = 'LIMITE'; }
-  else                    { color = 'red';    status = 'INSUFFISANT'; }
+  const vKeys = { green:'verdict.verysafe', blue:'verdict.safe', yellow:'verdict.limit', red:'verdict.insufficient' };
+  if (FS_val >= 3.2)      { color = 'green'; }
+  else if (FS_val >= 2.5) { color = 'blue'; }
+  else if (FS_val >= 2.0) { color = 'yellow'; }
+  else                    { color = 'red'; }
+  status = vKeys[color];
 
   return {
     stage1: { Nq, Nc, Ng, sq, sc, sg },
@@ -2677,7 +2681,8 @@ function displayResults(data, inp) {
   const banner = document.getElementById('verdict-banner');
   banner.className = `verdict-banner ${v.color}`;
   document.getElementById('verdict-icon').textContent = colorMap[v.color] || '📊';
-  document.getElementById('verdict-title').textContent = v.status;
+  const statusText = (i18n[currentLang] && i18n[currentLang][v.status]) ? i18n[currentLang][v.status] : v.status;
+  document.getElementById('verdict-title').textContent = statusText;
   document.getElementById('verdict-fs').textContent = s2.FS.toFixed(2);
 
   const fsEl = document.getElementById('r-fs');
